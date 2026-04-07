@@ -79,7 +79,7 @@ def build_plot(timestamps, cwnds, ip: str, port: int, output_path: Path, show: b
     plt.figure(figsize=(10, 5))
     plt.plot(timestamps, cwnds, marker="o", linewidth=1.5, markersize=4)
     plt.title(f"TCP cwnd for {ip}:{port}")
-    plt.xlabel("Packet/sample count")
+    plt.xlabel("time (seconds since first sample)")
     plt.ylabel("cwnd")
     plt.grid(True, linestyle="--", alpha=0.4)
     plt.tight_layout()
@@ -105,9 +105,12 @@ def main() -> int:
     output_path = Path(output_name)
 
     timestamps, cwnds = extract_samples(input_path, args.ip, args.port)
-    for time in range(0, len(timestamps)):
-        timestamps[time] = timestamps[time] - 79463.0
-    print(timestamps)
+    
+    # make timestamps relative to the first sample for better plotting
+    for time in range(1, len(timestamps)):
+        timestamps[time] = timestamps[time] - timestamps[0]
+    timestamps[0] = 0.0
+
     if not cwnds:
         print(
             f"No matching cwnd samples found for destination {args.ip}:{args.port} in {input_path}",

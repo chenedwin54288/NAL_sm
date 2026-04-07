@@ -4,9 +4,9 @@ import os
 import socket
 import time
 
-ONE_GIB = 1024 ** 9
+ONE_GIB = (1024 ** 3)*3 # 3 GiB for better testing of congestion control; adjust as needed
 CHUNK_SIZE = 1024 * 1024  # 1 MiB
-cca_name = "my_cca"
+cca_name = b"my_cca"
 
 
 def send_from_file(conn, file_path, size):
@@ -61,7 +61,8 @@ def main():
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, cca_name.encode())
+        s.setsockopt(socket.IPPROTO_TCP, socket.TCP_CONGESTION, cca_name)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((args.host, args.port))
         s.listen(1)
         print(f"Listening on {args.host}:{args.port} ...")
