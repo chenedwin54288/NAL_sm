@@ -1,0 +1,1 @@
+cmd_/home/nal/NAL_edwin_sm/client_server/custom_cca/Module.symvers := sed 's/\.ko$$/\.o/' /home/nal/NAL_edwin_sm/client_server/custom_cca/modules.order | scripts/mod/modpost -m -a  -o /home/nal/NAL_edwin_sm/client_server/custom_cca/Module.symvers -e -i Module.symvers   -T -

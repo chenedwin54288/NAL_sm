@@ -1,0 +1,59 @@
+## How to load the custom cca module
+```bash
+cd custom_cca
+
+# only do this when you have my_cca previously loaded
+sudo rmmod my_cca
+
+sudo insmod my_cca.ko
+
+# Verify it is loaded and recognized by the TCP stack
+sysctl net.ipv4.tcp_allowed_congestion_control
+
+# Set the custom algorithm as default
+sudo sysctl -w net.ipv4.tcp_congestion_control=my_cca
+sudo dmesg -w
+```
+
+
+## Enabling the loading of the custom cca module (secure boot)
+- **Note that step1 ~ step3 only needs to be done once.**
+- **Note that even if you modify the system to use my_cca, some already established TCP will still be using my_cca. You need to wait until these TCP sessions are done to do** `sudo rmmod my_cca`
+1. Create a signing key
+```bash
+mkdir -p ~/module-signing
+cd ~/module-signing
+
+openssl req -new -x509 -newkey rsa:2048 \
+  -keyout MOK.priv \
+  -outform DER \
+  -out MOK.der \
+  -nodes -days 36500 \
+  -subj "/CN=My Kernel Module Signing Key/"
+
+```
+
+2. Enroll the key
+```
+sudo mokutil --import MOK.der
+```
+
+3. Reboot
+- On reboot, the MOK manager screen should appear
+- Choose:
+  - Enroll MOK
+  - Continue
+  - Yes
+  - enter the password you set (pass: **NAL-123-neut**)
+
+4. Sign your module (**This has to be done everytime you rebuild the module**)
+```bash
+cd /home/nal/NAL_edwin_sm/client_server/custom_cca
+
+sudo /usr/src/linux-headers-$(uname -r)/scripts/sign-file \
+  sha256 \
+  ~/module-signing/MOK.priv \
+  ~/module-signing/MOK.der \
+  my_cca.ko
+
+```
