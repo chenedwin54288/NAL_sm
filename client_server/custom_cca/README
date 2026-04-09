@@ -3,6 +3,7 @@
 cd custom_cca
 
 # only do this when you have my_cca previously loaded
+# check with 'lsmod | grep my_cca'
 sudo rmmod my_cca
 
 sudo insmod my_cca.ko
@@ -11,6 +12,7 @@ sudo insmod my_cca.ko
 sysctl net.ipv4.tcp_allowed_congestion_control
 
 # Set the custom algorithm as default
+# You can specify which protocol to use in Python as well (Better)
 sudo sysctl -w net.ipv4.tcp_congestion_control=my_cca
 sudo dmesg -w
 ```

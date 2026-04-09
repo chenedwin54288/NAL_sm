@@ -5,18 +5,27 @@ import re
 import sys
 from pathlib import Path
 
-
 LOG_PATTERN = re.compile(
     r"""
-    ^\[\s*(?P<timestamp>\d+\.\d+)\]      # kernel log timestamp
-    .*?cwnd=(?P<cwnd>\d+)                # congestion window value
+    ^\[\s*(?P<timestamp>\d+\.\d+)\]      # [ 4215.320700]
+    .*?cwnd=(?P<cwnd>\d+)                # cwnd=3069
     .*?Destination:\s+
-    (?P<ip>\d{1,3}(?:\.\d{1,3}){3})      # destination IPv4
-    :(?P<port>\d+)                       # destination port
-    \s*$
+    (?P<ip>[\d.]+)                       # 128.178.122.39
+    :(?P<port>\d+)                       # 38880
     """,
     re.VERBOSE,
 )
+
+CA_STATE_PATTERN = re.compile(r"\bca_state=(?P<ca_state>[a-zA-Z_]+)(?:\(\d+\))?\b")
+
+CA_STATE_COLORS = {
+    "open": "green",
+    "disorder": "orange",
+    "cwr": "purple",
+    "recovery": "red",
+    "loss": "brown",
+    "unknown": "gray",
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -48,6 +57,7 @@ def parse_args() -> argparse.Namespace:
 def extract_samples(log_path: Path, ip: str, port: int):
     timestamps = []
     cwnds = []
+    ca_states = []
 
     with log_path.open("r", encoding="utf-8") as handle:
         for line in handle:
@@ -60,13 +70,19 @@ def extract_samples(log_path: Path, ip: str, port: int):
 
             timestamps.append(float(match.group("timestamp")))
             cwnds.append(int(match.group("cwnd")))
+            ca_state_match = CA_STATE_PATTERN.search(line)
+            #print(ca_state_match)
+            ca_states.append(
+                ca_state_match.group("ca_state").lower() if ca_state_match else "unknown"
+            )
 
-    return timestamps, cwnds
+    return timestamps, cwnds, ca_states
 
 
-def build_plot(timestamps, cwnds, ip: str, port: int, output_path: Path, show: bool):
+def build_plot(timestamps, cwnds, ca_states, ip: str, port: int, output_path: Path, show: bool):
     try:
         import matplotlib.pyplot as plt
+        from matplotlib.lines import Line2D
     except ImportError:
         print(
             "matplotlib is required to build the graph. Install it with: pip install matplotlib",
@@ -74,21 +90,60 @@ def build_plot(timestamps, cwnds, ip: str, port: int, output_path: Path, show: b
         )
         return 1
 
-    sample_counts = list(range(1, len(cwnds) + 1))
+    seen_states = []
 
-    plt.figure(figsize=(10, 5))
-    plt.plot(timestamps, cwnds, marker="o", linewidth=1.5, markersize=4)
-    plt.title(f"TCP cwnd for {ip}:{port}")
-    plt.xlabel("time (seconds since first sample)")
-    plt.ylabel("cwnd")
-    plt.grid(True, linestyle="--", alpha=0.4)
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=150)
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+
+    for idx, ca_state in enumerate(ca_states):
+        color = CA_STATE_COLORS.get(ca_state, CA_STATE_COLORS["unknown"])
+        if ca_state not in seen_states:
+            seen_states.append(ca_state)
+
+        ax.scatter(
+            timestamps[idx],
+            cwnds[idx],
+            color=color,
+            s=28,
+            zorder=3,
+        )
+
+        if idx > 0:
+            prev_ca_state = ca_states[idx - 1]
+            line_color = CA_STATE_COLORS.get(prev_ca_state, CA_STATE_COLORS["unknown"])
+            ax.plot(
+                timestamps[idx - 1:idx + 1],
+                cwnds[idx - 1:idx + 1],
+                color=line_color,
+                linewidth=1.8,
+                alpha=0.9,
+                zorder=2,
+            )
+
+    legend_handles = [
+        Line2D(
+            [0],
+            [0],
+            color=CA_STATE_COLORS.get(ca_state, CA_STATE_COLORS["unknown"]),
+            lw=2,
+            marker="o",
+            label=ca_state,
+        )
+        for ca_state in seen_states
+    ]
+
+    ax.set_title(f"TCP cwnd for {ip}:{port}")
+    ax.set_xlabel("Time since first sample (s)")
+    ax.set_ylabel("cwnd")
+    ax.grid(True, linestyle="--", alpha=0.4)
+    if legend_handles:
+        ax.legend(handles=legend_handles, title="CA State")
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=150)
 
     if show:
         plt.show()
     else:
-        plt.close()
+        plt.close(fig)
 
     return 0
 
@@ -101,10 +156,10 @@ def main() -> int:
         print(f"Input log file not found: {input_path}", file=sys.stderr)
         return 1
 
-    output_name = args.output or f"cwnd_{args.ip.replace('.', '_')}_{args.port}.png"
+    output_name = args.output or f"outputs/cwnd_{args.ip.replace('.', '_')}_{args.port}.png"
     output_path = Path(output_name)
 
-    timestamps, cwnds = extract_samples(input_path, args.ip, args.port)
+    timestamps, cwnds, ca_states = extract_samples(input_path, args.ip, args.port)
     
     # make timestamps relative to the first sample for better plotting
     for time in range(1, len(timestamps)):
@@ -118,7 +173,7 @@ def main() -> int:
         )
         return 1
 
-    rc = build_plot(timestamps, cwnds, args.ip, args.port, output_path, args.show)
+    rc = build_plot(timestamps, cwnds, ca_states, args.ip, args.port, output_path, args.show)
     if rc != 0:
         return rc
 

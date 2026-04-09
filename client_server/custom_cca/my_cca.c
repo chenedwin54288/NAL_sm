@@ -4,12 +4,15 @@
  * the corresponding TCP congestion-control state.
  */
 
+// https://www.yonch.com/tech/linux-tcp-congestion-control-internals
+
 #define pr_fmt(fmt) "TCP: " fmt
 
 #include <linux/module.h>
 #include <net/tcp.h>
 
 
+/* Map Linux TCP congestion-control states to readable strings for logging. */
 static const char *my_cca_ca_state_name(u8 state)
 {
 	switch (state) {
@@ -28,6 +31,10 @@ static const char *my_cca_ca_state_name(u8 state)
 	}
 }
 
+/*
+ * Derive a higher-level phase label from the raw TCP CA state and whether
+ * the flow is still below ssthresh.
+ */
 static const char *my_cca_phase_name(const struct sock *sk)
 {
 	const struct tcp_sock *tp = tcp_sk(sk);
@@ -45,6 +52,7 @@ static const char *my_cca_phase_name(const struct sock *sk)
 	return "congestion_avoidance";
 }
 
+/* Emit one consistent log record for cwnd-related events. */
 static void my_cca_log_cwnd(const struct sock *sk, const char *reason, u32 prev_cwnd)
 {
 	const struct tcp_sock *tp = tcp_sk(sk);
@@ -65,6 +73,15 @@ static void my_cca_log_cwnd(const struct sock *sk, const char *reason, u32 prev_
 		ntohs(dest_port));
 }
 
+/*
+ * SLOWSTART => new ACK => SLOWSTART
+ *                OR
+ * SLOWSTART => new ACK => SLOWSTART => CONGESTION AVOIDANCE
+ * 
+ *Exponential growth while cwnd is below ssthresh. 
+ * - Slow start exits when cwnd grows over ssthresh and
+ *   returns the leftover acks to adjust cwnd in congestion avoidance mode.
+*/
 static u32 my_cca_slow_start(struct tcp_sock *tp, u32 acked)
 {
 	u32 prev_cwnd = tcp_snd_cwnd(tp);
@@ -80,6 +97,10 @@ static u32 my_cca_slow_start(struct tcp_sock *tp, u32 acked)
 	return acked;
 }
 
+/* CONGESTION AVOIDANCE => new ACK => CONGESTION AVOIDANCE
+   - roughly every w ACKs, increase cwnd by 1
+   - if more ACKs arrive at once, cwnd can grow more than 1 in a single call
+*/
 static void my_cca_cong_avoid_ai(struct tcp_sock *tp, u32 w, u32 acked)
 {
 	u32 prev_cwnd = tcp_snd_cwnd(tp);
@@ -91,6 +112,10 @@ static void my_cca_cong_avoid_ai(struct tcp_sock *tp, u32 w, u32 acked)
 	}
 
 	tp->snd_cwnd_cnt += acked;
+	// - Handle the case where a burst of ACKs causes snd_cwnd_cnt to exceed w by more than 1, 
+	//   allowing cwnd to grow by more than 1 in a single call.
+	// - keep only the remainder with tp->snd_cwnd_cnt -= delta * w, 
+	//   cwnd to grow by more than 1 in a single call.
 	if (tp->snd_cwnd_cnt >= w) {
 		u32 delta = tp->snd_cwnd_cnt / w;
 
@@ -104,6 +129,14 @@ static void my_cca_cong_avoid_ai(struct tcp_sock *tp, u32 w, u32 acked)
 		my_cca_log_cwnd(sk, "congestion_avoidance", prev_cwnd);
 }
 
+/*
+ * SLOWSTART => new ACK => SLOWSTART
+ *                OR
+ * SLOWSTART => new ACK => SLOWSTART => CONGESTION AVOIDANCE
+ * 
+ * Main ACK-driven congestion-control callback used by TCP.
+ * It chooses between slow start and additive increase.
+ */
 static void my_cca_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
@@ -111,16 +144,20 @@ static void my_cca_cong_avoid(struct sock *sk, u32 ack, u32 acked)
 	if (!tcp_is_cwnd_limited(sk))
 		return;
 
+	// if sender is cwnd-limited, try to grow the congestion window
 	if (tcp_in_slow_start(tp)) {
 		acked = my_cca_slow_start(tp, acked);
 		if (!acked)
 			return;
 	}
 
+	// If we have remaining ACKs after slow start, or if we're already above ssthresh, 
+	// use congestion avoidance.
 	my_cca_cong_avoid_ai(tp, tcp_snd_cwnd(tp), acked);
 	(void)ack;
 }
 
+/* Recompute ssthresh after a congestion event, matching Reno behavior. */
 static u32 my_cca_ssthresh(struct sock *sk)
 {
 	const struct tcp_sock *tp = tcp_sk(sk);
@@ -131,6 +168,7 @@ static u32 my_cca_ssthresh(struct sock *sk)
 	return ssthresh;
 }
 
+/* Log transitions into recovery/loss/open states as TCP changes CA state. */
 static void my_cca_set_state(struct sock *sk, u8 new_state)
 {
 	const struct tcp_sock *tp = tcp_sk(sk);
@@ -140,7 +178,7 @@ static void my_cca_set_state(struct sock *sk, u8 new_state)
 	__be16 dest_port = inet->inet_dport;
 
 	pr_info(
-		"my_cca: set_state %s(%u)->%s(%u) cwnd=%u ssthresh=%u phase=%s Destination: %pI4:%d\n",
+		"my_cca: set_state %s(%u)->%s(%u) cwnd=%u ssthresh=%u phase=%s ca_state=%s(%u) Destination: %pI4:%d\n",
 		my_cca_ca_state_name(old_state),
 		old_state,
 		my_cca_ca_state_name(new_state),
@@ -148,6 +186,8 @@ static void my_cca_set_state(struct sock *sk, u8 new_state)
 		tcp_snd_cwnd(tp),
 		tp->snd_ssthresh,
 		my_cca_phase_name(sk),
+		my_cca_ca_state_name(new_state),
+		new_state,
 		&dest_ip,
 		ntohs(dest_port));
 }
