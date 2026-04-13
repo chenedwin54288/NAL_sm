@@ -1,0 +1,88 @@
+sudo tc qdisc del dev eno1 root 2>/dev/null
+
+# Changing the queue size
+## Test 1: cwnd_128_178_122_39_46844.png (5GB)
+- sudo tc qdisc add dev eno1 root tbf rate 100mbit burst 64kbit limit 150000
+- RTT: 0.150 ~ 0.256 
+- 0.256 * 100 Mbps == 25600 bits must be in flight to utilize the pipe 100%
+  (while waiting for the ACK, this is the maximum amount of data that you could send)
+
+- queue size is 150,000 bytes which is approximately 100 packets
+- so to send 5GB, assuming that the MTU is 1500 bytes, you need 3,333,333 packets
+
+## Test 2: cwnd_128_178_122_39_44702.png (5GB)
+- sudo tc qdisc add dev eno1 root tbf rate 100mbit burst 64kbit limit 300000
+
+## Test 3: cwnd_128_178_122_39_33140.png (5GB)
+- sudo tc qdisc add dev eno1 root tbf rate 100mbit burst 64kbit limit 450000
+
+Increasing the queue size does not solve the plateu issue. This is because
+when the queue size is big, RTT will be longer (it takes longer for a packet to exit the queue). And since RTT ts longer, this means that the time we receive ACK will be longer as well. Since TCP only increases cwnd when it receives an ACK, this causes the plateau as shown in the figures above (**or maybe it could be caused by the receiver's recv_buffer being full (flow control) and the receiver sending recv_wnd == 0, telling the sender to stop**).
+
+![alt text](cc_fc.png)
+
+Since RTT is around 0.144 ~ 0.242ms, BDP is around 25600 bits (3200 bytes), it might be better to try around with a queue size that is **2 to 4 times the BDP**. 
+
+## Test 4: cwnd_128_178_122_39_53662.png (5GB)
+- sudo tc qdisc add dev eno1 root tbf rate 100mbit burst 64kbit limit 30000
+- kinda looks like an ideal graph
+
+## Test 5: client_server/extract_cwnd/outputs/10 GB/cwnd_128_178_122_39_51442.png (10GB)
+
+
+# Changing the module.ko, adding 'my_cca_pkts_acked()' to load the cwnd when receiving ACK
+
+## Test 6: client_server/extract_cwnd/outputs/10 GB/56370/cwnd_128_178_122_39_56370.png
+- Note that the estimated maximum RTT can be, 
+  - Queueing Delay = 30000 bytes / (100,000,000 bits/s) == 2.4 ms = 2400 us
+  - which is the time that each packet in the queue has to wait when the queue TVF queue is full
+  - Baseline RTT + Queueing Delay
+  
+- plateu can still be observed, maybe try to observe the rcv_wnd size of the receiver to see whether it is caused by the receiver's buffer being full
+- => Tested with 3GB transmission with the rcvd, and it does not seem like the problem is with the queue being full. 
+- => The problem is more likely caused by the TBF on the server side. Apparently, the TBF parameters we set with "qdisc" wa the outgoing TBF.
+     This TBF limits the packet that goes from the client to the server (the ACK). Which is also the reason why when we checked with "tc -s qdisc show dev eno1" on the client side, you will see no packets has been dropped, meaning that the bottleneck is not with this TBF.
+
+## Test 7: extract_cwnd/outputs/3 GB/44258 (1GB) && extract_cwnd/outputs/1 GB/38026 (1GB)
+- on both client and server side, the the TBF (outgoing) to 'sudo tc qdisc add dev eno1 root tbf rate 100mbit burst 64kbit limit 30000'
+- Now the transmission speed has become way slower (around 80 seconds... this actually makes sense as the server sending rate is currently 100mBit/s which is 12.5MB/s, and to send 1GB == 1000MB it indeed takes around 80 seconds)
+
+## Test 8: extract_cwnd/outputs/1 GB/49030 (1GB)
+- making the transmission faster by setting new TBF
+- sudo tc qdisc add dev eno1 root tbf rate 500mbit burst 64kbit limit 50000
+- 500mbit * 0.200ms == 12500 bytes, 12500 bytes * 4 = 50000 bytes (queue size)
+- As it can be seen now, we could seen a CLEAR shark-tooth diagram. This is because the server's TBF is the limiting factor (application wants to send more data, but it is limited by the TBF parameters set by the server) => we want to find the limit of the client TBF (server --> client)
+- to do this we need to set a virtual interface (Linux only allows to set a TBF for the outgoing packets)
+
+## Test 9: extract_cwnd/outputs/3 GB/51706 (3 GB)
+- Linux does not allow "shaping" (slowing down and buffering) directly on ingress; it only allows "policing" (dropping packets that exceed a limit). To use a true TBF for incoming traffic, you must redirect that traffic to a virtual interface called ifb0
+
+- How to set it up (if not already done):
+ - Load the module: 'modprobe ifb'
+ - Enable the virtual interface: `ip link set ifb0 up`
+ - Redirect eth0 incoming to ifb0:
+```bash
+tc qdisc add dev eno1 ingress
+tc filter add dev eno1 parent ffff: protocol ip u32 match u32 0 0 action mirred egress redirect dev ifb0
+```
+- USING THE METHOD ABOVE we **didn't see the backlog changing** 
+
+- ANOTHER THEORY why we see the pleateau whenever we send > 3GB could be the **NIC's frequent requeing**. When you check backlog_plot.txt, you will see that each packet has a maximum size of **65102b** meanwhile the bandwidth of the physical link is way less than the network capacity. This causes the NIC's TX queue to fill up qucikly causing it to **requeue** the incoming packets back to the TBF (why we see the requeue increasing)
+
+- **TCP Segmentation Offload**: The CPU creates one large packet, and the NIC's TSO engine splits it into smaller frames, handling header updates (IP, TCP) for each segment. By delegating this task, it reduces CPU overhead, lowers power consumption, and increases throughput in high-speed networks.
+
+- This frequent requeing causes a small stall, which in term increases the RTT, causing the pleateau
+- One problem to notice here is that in the cwnd diagram the longest pleateau happens around 12500ms, and in the `extract_cwnd/outputs/3 GB/51706/backlog_and_deltas_plot.png` the time where the requeues became so big was around 30000ms Considering that the backlog bash script started running 5000ms faster than the cwnd script with the previous assumption, the requeue burst should happen at around 17500ms...
+
+
+- In the next test, we will disable the server to send 65000 bytes packet, reducing the requeues of the NIC, and try to see whether this could generate the sharktooth diagram.
+
+## Test 10: 
+- Disable TCP Segmentation Offload
+`sudo ethtool -K eno1 tso off`
+- Disable Generic Segmentation Offload
+`sudo ethtool -K eno1 gso off`
+- (Optional) Disable Generic Receive Offload for the incoming side
+`sudo ethtool -K eno1 gro off`
+
+

@@ -17,6 +17,7 @@ LOG_PATTERN = re.compile(
 )
 
 CA_STATE_PATTERN = re.compile(r"\bca_state=(?P<ca_state>[a-zA-Z_]+)(?:\(\d+\))?\b")
+CA_PHASE_PATTERN = re.compile(r"\bphase=(?P<phase>[a-zA-Z_]+)(?:\(\d+\))?\b")
 
 CA_STATE_COLORS = {
     "open": "green",
@@ -25,6 +26,13 @@ CA_STATE_COLORS = {
     "recovery": "red",
     "loss": "brown",
     "unknown": "gray",
+}
+
+CA_PHASE_COLORS = {
+    "slow_start": "green",
+    "fast_retransmit": "orange",
+    "loss_recovery": "red",
+    "congestion_avoidance": "gray",
 }
 
 
@@ -51,15 +59,21 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Display the graph interactively in addition to saving it",
     )
+    parser.add_argument(
+        "-gb",
+        "--gb",
+        default="others",
+        help="save the graph in a subfolder named after the GB (default: others)",
+    )
     return parser.parse_args()
 
 
-def extract_samples(log_path: Path, ip: str, port: int):
+def extract_samples(log_path: Path, gb: int, ip: str, port: int):
     timestamps = []
     cwnds = []
-    ca_states = []
+    ca_phases = []
 
-    with log_path.open("r", encoding="utf-8") as handle:
+    with log_path.open("r", encoding="utf-8") as handle, open(f"outputs/{gb} GB/{port}/cwnd_{ip.replace('.', '_')}_{port}_log.txt", "w") as log:
         for line in handle:
             match = LOG_PATTERN.match(line.strip())
             if not match:
@@ -68,18 +82,22 @@ def extract_samples(log_path: Path, ip: str, port: int):
             if match.group("ip") != ip or int(match.group("port")) != port:
                 continue
 
+            log.writelines(line)     
+
             timestamps.append(float(match.group("timestamp")))
+
             cwnds.append(int(match.group("cwnd")))
-            ca_state_match = CA_STATE_PATTERN.search(line)
-            #print(ca_state_match)
-            ca_states.append(
-                ca_state_match.group("ca_state").lower() if ca_state_match else "unknown"
+
+            # ca_state_match = CA_STATE_PATTERN.search(line)
+            ca_phase_match = CA_PHASE_PATTERN.search(line)
+            ca_phases.append(
+                ca_phase_match.group("phase").lower() if ca_phase_match else "unknown"
             )
 
-    return timestamps, cwnds, ca_states
+    return timestamps, cwnds, ca_phases
 
 
-def build_plot(timestamps, cwnds, ca_states, ip: str, port: int, output_path: Path, show: bool):
+def build_plot(timestamps, cwnds, ca_phases, ip: str, port: int, output_path: Path, show: bool):
     try:
         import matplotlib.pyplot as plt
         from matplotlib.lines import Line2D
@@ -92,12 +110,15 @@ def build_plot(timestamps, cwnds, ca_states, ip: str, port: int, output_path: Pa
 
     seen_states = []
 
-    fig, ax = plt.subplots(figsize=(11, 5.5))
+    timestamps = [ts * 1000.0 for ts in timestamps]
+    time_unit = "ms"
 
-    for idx, ca_state in enumerate(ca_states):
-        color = CA_STATE_COLORS.get(ca_state, CA_STATE_COLORS["unknown"])
-        if ca_state not in seen_states:
-            seen_states.append(ca_state)
+    fig, ax = plt.subplots(figsize=(12, 5.5))
+
+    for idx, ca_phase in enumerate(ca_phases):
+        color = CA_PHASE_COLORS[ca_phase]
+        if ca_phase not in seen_states:
+            seen_states.append(ca_phase)
 
         ax.scatter(
             timestamps[idx],
@@ -108,12 +129,10 @@ def build_plot(timestamps, cwnds, ca_states, ip: str, port: int, output_path: Pa
         )
 
         if idx > 0:
-            prev_ca_state = ca_states[idx - 1]
-            line_color = CA_STATE_COLORS.get(prev_ca_state, CA_STATE_COLORS["unknown"])
             ax.plot(
                 timestamps[idx - 1:idx + 1],
                 cwnds[idx - 1:idx + 1],
-                color=line_color,
+                color=color,
                 linewidth=1.8,
                 alpha=0.9,
                 zorder=2,
@@ -123,16 +142,16 @@ def build_plot(timestamps, cwnds, ca_states, ip: str, port: int, output_path: Pa
         Line2D(
             [0],
             [0],
-            color=CA_STATE_COLORS.get(ca_state, CA_STATE_COLORS["unknown"]),
+            color=CA_PHASE_COLORS[ca_phase],
             lw=2,
             marker="o",
-            label=ca_state,
+            label=ca_phase,
         )
-        for ca_state in seen_states
+        for ca_phase in seen_states
     ]
 
     ax.set_title(f"TCP cwnd for {ip}:{port}")
-    ax.set_xlabel("Time since first sample (s)")
+    ax.set_xlabel(f"Time since first sample ({time_unit})")
     ax.set_ylabel("cwnd")
     ax.grid(True, linestyle="--", alpha=0.4)
     if legend_handles:
@@ -156,10 +175,11 @@ def main() -> int:
         print(f"Input log file not found: {input_path}", file=sys.stderr)
         return 1
 
-    output_name = args.output or f"outputs/cwnd_{args.ip.replace('.', '_')}_{args.port}.png"
+    output_name = args.output or f"outputs/{args.gb} GB/{args.port}/cwnd_{args.ip.replace('.', '_')}_{args.port}.png"
     output_path = Path(output_name)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    timestamps, cwnds, ca_states = extract_samples(input_path, args.ip, args.port)
+    timestamps, cwnds, ca_phases = extract_samples(input_path, args.gb, args.ip, args.port)
     
     # make timestamps relative to the first sample for better plotting
     for time in range(1, len(timestamps)):
@@ -173,7 +193,7 @@ def main() -> int:
         )
         return 1
 
-    rc = build_plot(timestamps, cwnds, ca_states, args.ip, args.port, output_path, args.show)
+    rc = build_plot(timestamps, cwnds, ca_phases, args.ip, args.port, output_path, args.show)
     if rc != 0:
         return rc
 

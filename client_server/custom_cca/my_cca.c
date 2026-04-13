@@ -91,8 +91,8 @@ static u32 my_cca_slow_start(struct tcp_sock *tp, u32 acked)
 	acked -= cwnd - prev_cwnd;
 	tcp_snd_cwnd_set(tp, min(cwnd, tp->snd_cwnd_clamp));
 
-	if (tcp_snd_cwnd(tp) != prev_cwnd)
-		my_cca_log_cwnd(sk, "slow_start", prev_cwnd);
+	// if (tcp_snd_cwnd(tp) != prev_cwnd)
+	// 	my_cca_log_cwnd(sk, "slow_start", prev_cwnd);
 
 	return acked;
 }
@@ -125,8 +125,8 @@ static void my_cca_cong_avoid_ai(struct tcp_sock *tp, u32 w, u32 acked)
 
 	tcp_snd_cwnd_set(tp, min(tcp_snd_cwnd(tp), tp->snd_cwnd_clamp));
 
-	if (tcp_snd_cwnd(tp) != prev_cwnd)
-		my_cca_log_cwnd(sk, "congestion_avoidance", prev_cwnd);
+	// if (tcp_snd_cwnd(tp) != prev_cwnd)
+	// 	my_cca_log_cwnd(sk, "congestion_avoidance", prev_cwnd);
 }
 
 /*
@@ -164,7 +164,7 @@ static u32 my_cca_ssthresh(struct sock *sk)
 	u32 prev_cwnd = tcp_snd_cwnd(tp);
 	u32 ssthresh = max(prev_cwnd >> 1U, 2U);
 
-	my_cca_log_cwnd(sk, "ssthresh", prev_cwnd);
+	//my_cca_log_cwnd(sk, "ssthresh", prev_cwnd);
 	return ssthresh;
 }
 
@@ -199,6 +199,27 @@ static u32 my_cca_undo_cwnd(struct sock *sk)
 	return max(tcp_snd_cwnd(tp), tp->prior_cwnd);
 }
 
+
+// Log cwnd and CA state when ACKs are received, to observe how they evolve over time.
+static void my_cca_pkts_acked(struct sock *sk, const struct ack_sample *sample)
+{
+	struct tcp_sock *tp = tcp_sk(sk);
+	static u32 last_logged_cwnd;
+	u32 cwnd = tcp_snd_cwnd(tp);
+
+	if (sample->rtt_us < 0 || cwnd == last_logged_cwnd)
+		return;
+
+	last_logged_cwnd = cwnd;
+
+	const struct inet_sock *inet = inet_sk(sk);
+	__be32 dest_ip = inet->inet_daddr;
+	__be16 dest_port = inet->inet_dport;
+	
+	pr_info("my_cca: cwnd=%u rtt=%d phase=%s Destination: %pI4:%d\n", cwnd, sample->rtt_us, my_cca_phase_name(sk), &dest_ip, ntohs(dest_port));
+}
+
+
 static struct tcp_congestion_ops my_cca __read_mostly = {
 	.flags		= TCP_CONG_NON_RESTRICTED,
 	.name		= "my_cca",
@@ -207,6 +228,7 @@ static struct tcp_congestion_ops my_cca __read_mostly = {
 	.cong_avoid	= my_cca_cong_avoid,
 	.set_state	= my_cca_set_state,
 	.undo_cwnd	= my_cca_undo_cwnd,
+	.pkts_acked = my_cca_pkts_acked,
 };
 
 static int __init my_cca_register(void)
