@@ -205,10 +205,16 @@ static void my_cca_pkts_acked(struct sock *sk, const struct ack_sample *sample)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
 	static u32 last_logged_cwnd;
+	static u32 count = 0;
 	u32 cwnd = tcp_snd_cwnd(tp);
 
-	if (sample->rtt_us < 0 || cwnd == last_logged_cwnd)
+	if (sample->rtt_us < 0)
 		return;
+	else if (count++ % 10 != 0)
+		return;
+	else if (cwnd == last_logged_cwnd)
+		return;
+	
 
 	last_logged_cwnd = cwnd;
 
@@ -216,7 +222,9 @@ static void my_cca_pkts_acked(struct sock *sk, const struct ack_sample *sample)
 	__be32 dest_ip = inet->inet_daddr;
 	__be16 dest_port = inet->inet_dport;
 	
+	// if (count++ % 10 == 0) { // Log every 10th change to reduce log volume
 	pr_info("my_cca: cwnd=%u rtt=%d phase=%s Destination: %pI4:%d\n", cwnd, sample->rtt_us, my_cca_phase_name(sk), &dest_ip, ntohs(dest_port));
+	// }
 }
 
 

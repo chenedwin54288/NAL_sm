@@ -75,14 +75,27 @@ tc filter add dev eno1 parent ffff: protocol ip u32 match u32 0 0 action mirred 
 - One problem to notice here is that in the cwnd diagram the longest pleateau happens around 12500ms, and in the `extract_cwnd/outputs/3 GB/51706/backlog_and_deltas_plot.png` the time where the requeues became so big was around 30000ms Considering that the backlog bash script started running 5000ms faster than the cwnd script with the previous assumption, the requeue burst should happen at around 17500ms...
 
 
-- In the next test, we will disable the server to send 65000 bytes packet, reducing the requeues of the NIC, and try to see whether this could generate the sharktooth diagram.
+- In the next test, we will disable the server to send 65000 bytes packet (make it 1500 standard MTU size), reducing the requeues of the NIC, and try to see whether this could generate the sharktooth diagram.
 
-## Test 10: 
-- Disable TCP Segmentation Offload
-`sudo ethtool -K eno1 tso off`
-- Disable Generic Segmentation Offload
-`sudo ethtool -K eno1 gso off`
+## Test 10: extract_cwnd/outputs/3 GB/41750 
+- **ethtool**[https://linux.die.net/man/8/ethtool]: query or control network driver and hardware settings
+- **Disable TCP Segmentation Offload** 
+ - `sudo ethtool -K eno1 tso off`
+ - A hardware offload mechanism where the Network Interface Card (NIC) splits large TCP packets into smaller MTU-sized frames before transmission. This reduces the load on the CPU
+
+- **Disable Generic Segmentation Offload**
+ - `sudo ethtool -K eno1 gso off`
+ - A software fallback for TSO. If the NIC doesn't support TSO, GSO segmentates large packets in the software just before passing them to the driver, supporting TCP, UDP, and IP tunnels
+
+![alt text](tso_gso.png)
+
 - (Optional) Disable Generic Receive Offload for the incoming side
-`sudo ethtool -K eno1 gro off`
+ - `sudo ethtool -K eno1 gro off`
+
+- As it can be seen from the cwnd figure, it seems like the flow of the packets has become better. More cwnd logs are printed to the context.txt... => causing us to not able to know when the cwnd falls into retransmission
+- TEMP IDEA is to add back a counter so it only prints the logs every 10 message => even after this modification, the cwnd still keeps rising. It might be that the loggs are the actual cwnd alternation => testing with 10GB sending and receiving
+
+## Test 11: 
+
 
 
