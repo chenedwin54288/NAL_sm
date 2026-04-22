@@ -1,4 +1,9 @@
+# Some tip commands
+```bash  
 sudo tc qdisc del dev eno1 root 2>/dev/null
+tc -s qdisc show dev eno1
+```
+
 
 # Changing the queue size
 ## Test 1: cwnd_128_178_122_39_46844.png (5GB)
@@ -58,7 +63,7 @@ Since RTT is around 0.144 ~ 0.242ms, BDP is around 25600 bits (3200 bytes), it m
 - Linux does not allow "shaping" (slowing down and buffering) directly on ingress; it only allows "policing" (dropping packets that exceed a limit). To use a true TBF for incoming traffic, you must redirect that traffic to a virtual interface called ifb0
 
 - How to set it up (if not already done):
- - Load the module: 'modprobe ifb'
+ - Load the module: `modprobe ifb`
  - Enable the virtual interface: `ip link set ifb0 up`
  - Redirect eth0 incoming to ifb0:
 ```bash
@@ -95,7 +100,32 @@ tc filter add dev eno1 parent ffff: protocol ip u32 match u32 0 0 action mirred 
 - As it can be seen from the cwnd figure, it seems like the flow of the packets has become better. More cwnd logs are printed to the context.txt... => causing us to not able to know when the cwnd falls into retransmission
 - TEMP IDEA is to add back a counter so it only prints the logs every 10 message => even after this modification, the cwnd still keeps rising. It might be that the loggs are the actual cwnd alternation => testing with 10GB sending and receiving
 
-## Test 11: 
+## Test 11: extract_cwnd/outputs/10 GB/51658 && extract_cwnd/outputs/10 GB/40808
+- 40808 contains the rcwd from the client, but it seems like the client is able to handle the incoming packets from the server. SO the problem is not with flow control.
+- SUSPECT the problem is either 
+  [1] missing something in the modified cca algo (should put pr_info else where)
+  [2] client's TBF incoming buffer
+  [3] NIC requeuing still happening occasionally
+- MAYBE TAKE MAHDI's suggestion and try to modify the cca module in a way that it logss the cwnd whenever it changes
+
+## Test 12: extract_cwnd/outputs/10 GB/51682
+- But firstly, try to disable the TBF filter on the client side and apply TBF on the server side to see whether there will be a sharktooth diagram
+- sudo tc qdisc add dev eno1 root tbf rate 500mbit burst 64kbit limit 50000
+- Indeed we can see a sharktooth graph
 
 
+## Test 13: extract_cwnd/outputs/10 GB/52682
+- I just realized that the burst size in the previous settings was too small. When the burst size is too small, the bucket will not be able to handle a burst of packets coming from the CPU. 
+- Also the queue size is set to 100,000 bytes as the rtt is 0.400ms now.
+- sudo tc qdisc add dev eno1 root tbf rate 500mbit burst 1mb limit 100000
+- Indeed we can still see a sharktooth graph
 
+
+# Connecting two machines directly together 
+## Test 14: extract_cwnd/outputs/3 GB/40004
+- sudo tc qdisc add dev eno1 root tbf rate 1Gbit burst 1mb limit 50000
+- 1Gbit is equivalent to 125mb
+- **rtt is 0.200ms**. Thus...
+  BDD = 0.0002s * 125mb = 0.025mb = 25kb = 25000 bytes
+  The queue size is then set to "double of this" thus 50000 bytes 
+- Now two machines are connected together so rtt wouldn't be a problem

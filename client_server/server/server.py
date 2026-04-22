@@ -4,7 +4,7 @@ import os
 import socket
 import time
 
-ONE_GIB = (1024 ** 3) * 10 # 1 GiB for better testing of congestion control; adjust as needed
+ONE_GIB = (1024 ** 3) * 3 # 1 GiB for better testing of congestion control; adjust as needed
 CHUNK_SIZE = 1024 * 1024  # 1 MiB
 cca_name = b"my_cca"
 

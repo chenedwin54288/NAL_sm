@@ -7,6 +7,7 @@
 // https://www.yonch.com/tech/linux-tcp-congestion-control-internals
 
 #define pr_fmt(fmt) "TCP: " fmt
+#define APPLICATION_SPECIFIC_CWND_LIMIT 50
 
 #include <linux/module.h>
 #include <net/tcp.h>
@@ -60,17 +61,17 @@ static void my_cca_log_cwnd(const struct sock *sk, const char *reason, u32 prev_
 	__be32 dest_ip = inet->inet_daddr;
 	__be16 dest_port = inet->inet_dport;
 
-	pr_info(
-		"my_cca: %s cwnd=%u prev_cwnd=%u ssthresh=%u phase=%s ca_state=%s(%u) Destination: %pI4:%d\n",
-		reason,
-		tcp_snd_cwnd(tp),
-		prev_cwnd,
-		tp->snd_ssthresh,
-		my_cca_phase_name(sk),
-		my_cca_ca_state_name(inet_csk(sk)->icsk_ca_state),
-		inet_csk(sk)->icsk_ca_state,
-		&dest_ip,
-		ntohs(dest_port));
+	// pr_info(
+	// 	"my_cca: %s cwnd=%u prev_cwnd=%u ssthresh=%u phase=%s ca_state=%s(%u) Destination: %pI4:%d\n",
+	// 	reason,
+	// 	tcp_snd_cwnd(tp),
+	// 	prev_cwnd,
+	// 	tp->snd_ssthresh,
+	// 	my_cca_phase_name(sk),
+	// 	my_cca_ca_state_name(inet_csk(sk)->icsk_ca_state),
+	// 	inet_csk(sk)->icsk_ca_state,
+	// 	&dest_ip,
+	// 	ntohs(dest_port));
 }
 
 /*
@@ -86,6 +87,7 @@ static u32 my_cca_slow_start(struct tcp_sock *tp, u32 acked)
 {
 	u32 prev_cwnd = tcp_snd_cwnd(tp);
 	u32 cwnd = min(prev_cwnd + acked, tp->snd_ssthresh);
+	cwnd = min(cwnd, APPLICATION_SPECIFIC_CWND_LIMIT);
 	struct sock *sk = (struct sock *)tp;
 
 	acked -= cwnd - prev_cwnd;
@@ -123,7 +125,8 @@ static void my_cca_cong_avoid_ai(struct tcp_sock *tp, u32 w, u32 acked)
 		tcp_snd_cwnd_set(tp, tcp_snd_cwnd(tp) + delta);
 	}
 
-	tcp_snd_cwnd_set(tp, min(tcp_snd_cwnd(tp), tp->snd_cwnd_clamp));
+	u32 new_cwnd = min(tcp_snd_cwnd(tp), tp->snd_cwnd_clamp);
+	tcp_snd_cwnd_set(tp, min(new_cwnd, APPLICATION_SPECIFIC_CWND_LIMIT));
 
 	// if (tcp_snd_cwnd(tp) != prev_cwnd)
 	// 	my_cca_log_cwnd(sk, "congestion_avoidance", prev_cwnd);
@@ -177,19 +180,19 @@ static void my_cca_set_state(struct sock *sk, u8 new_state)
 	__be32 dest_ip = inet->inet_daddr;
 	__be16 dest_port = inet->inet_dport;
 
-	pr_info(
-		"my_cca: set_state %s(%u)->%s(%u) cwnd=%u ssthresh=%u phase=%s ca_state=%s(%u) Destination: %pI4:%d\n",
-		my_cca_ca_state_name(old_state),
-		old_state,
-		my_cca_ca_state_name(new_state),
-		new_state,
-		tcp_snd_cwnd(tp),
-		tp->snd_ssthresh,
-		my_cca_phase_name(sk),
-		my_cca_ca_state_name(new_state),
-		new_state,
-		&dest_ip,
-		ntohs(dest_port));
+	// pr_info(
+	// 	"my_cca: set_state %s(%u)->%s(%u) cwnd=%u ssthresh=%u phase=%s ca_state=%s(%u) Destination: %pI4:%d\n",
+	// 	my_cca_ca_state_name(old_state),
+	// 	old_state,
+	// 	my_cca_ca_state_name(new_state),
+	// 	new_state,
+	// 	tcp_snd_cwnd(tp),
+	// 	tp->snd_ssthresh,
+	// 	my_cca_phase_name(sk),
+	// 	my_cca_ca_state_name(new_state),
+	// 	new_state,
+	// 	&dest_ip,
+	// 	ntohs(dest_port));
 }
 
 static u32 my_cca_undo_cwnd(struct sock *sk)
@@ -222,9 +225,9 @@ static void my_cca_pkts_acked(struct sock *sk, const struct ack_sample *sample)
 	__be32 dest_ip = inet->inet_daddr;
 	__be16 dest_port = inet->inet_dport;
 	
-	// if (count++ % 10 == 0) { // Log every 10th change to reduce log volume
-	pr_info("my_cca: cwnd=%u rtt=%d phase=%s Destination: %pI4:%d\n", cwnd, sample->rtt_us, my_cca_phase_name(sk), &dest_ip, ntohs(dest_port));
-	// }
+	// // if (count++ % 10 == 0) { // Log every 10th change to reduce log volume
+	// pr_info("my_cca: cwnd=%u rtt=%d phase=%s Destination: %pI4:%d\n", cwnd, sample->rtt_us, my_cca_phase_name(sk), &dest_ip, ntohs(dest_port));
+	// // }
 }
 
 
@@ -241,13 +244,13 @@ static struct tcp_congestion_ops my_cca __read_mostly = {
 
 static int __init my_cca_register(void)
 {
-	pr_info("my_cca: registering congestion control\n");
+	// pr_info("my_cca: registering congestion control\n");
 	return tcp_register_congestion_control(&my_cca);
 }
 
 static void __exit my_cca_unregister(void)
 {
-	pr_info("my_cca: unregistering congestion control\n");
+	// pr_info("my_cca: unregistering congestion control\n");
 	tcp_unregister_congestion_control(&my_cca);
 }
 
