@@ -1,0 +1,32 @@
+[680109.437702] TCP: my_cca: set_state open(0)->open(0) cwnd=10 ssthresh=2147483647 phase=slow_start ca_state=open(0) Destination: 128.178.122.39:39106
+[680109.438640] TCP: my_cca: cwnd=10 rtt=153 phase=slow_start Destination: 128.178.122.39:39106
+[680109.438979] TCP: my_cca: cwnd=34 rtt=177 phase=slow_start Destination: 128.178.122.39:39106
+[680109.439272] TCP: my_cca: cwnd=50 rtt=390 phase=slow_start Destination: 128.178.122.39:39106
+[680113.655175] TCP: my_cca: set_state open(0)->cwr(2) cwnd=50 ssthresh=25 phase=congestion_avoidance ca_state=cwr(2) Destination: 128.178.122.39:39106
+[680113.655325] TCP: my_cca: cwnd=25 rtt=479 phase=loss_recovery Destination: 128.178.122.39:39106
+[680113.655487] TCP: my_cca: set_state cwr(2)->open(0) cwnd=25 ssthresh=25 phase=loss_recovery ca_state=open(0) Destination: 128.178.122.39:39106
+[680113.655917] TCP: my_cca: cwnd=26 rtt=302 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.656159] TCP: my_cca: cwnd=27 rtt=222 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.656711] TCP: my_cca: cwnd=28 rtt=266 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.657000] TCP: my_cca: cwnd=29 rtt=235 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.657359] TCP: my_cca: cwnd=30 rtt=353 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.657632] TCP: my_cca: cwnd=31 rtt=335 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.658164] TCP: my_cca: cwnd=32 rtt=378 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.658421] TCP: my_cca: cwnd=33 rtt=391 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.658678] TCP: my_cca: cwnd=34 rtt=370 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.659274] TCP: my_cca: cwnd=35 rtt=279 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.659569] TCP: my_cca: cwnd=36 rtt=359 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.660106] TCP: my_cca: cwnd=37 rtt=385 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.660703] TCP: my_cca: cwnd=38 rtt=457 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.660985] TCP: my_cca: cwnd=39 rtt=394 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.661551] TCP: my_cca: cwnd=40 rtt=465 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.662203] TCP: my_cca: cwnd=41 rtt=413 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.662502] TCP: my_cca: cwnd=42 rtt=358 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.662990] TCP: my_cca: cwnd=43 rtt=483 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.663634] TCP: my_cca: cwnd=44 rtt=444 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.664183] TCP: my_cca: cwnd=45 rtt=487 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.664695] TCP: my_cca: cwnd=46 rtt=465 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.665288] TCP: my_cca: cwnd=47 rtt=532 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.665883] TCP: my_cca: cwnd=48 rtt=443 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.666427] TCP: my_cca: cwnd=49 rtt=445 phase=congestion_avoidance Destination: 128.178.122.39:39106
+[680113.666996] TCP: my_cca: cwnd=50 rtt=497 phase=congestion_avoidance Destination: 128.178.122.39:39106
