@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Example command:
 #     python3 Server/server.py \
 #       --host 0.0.0.0 \
@@ -19,9 +21,6 @@
 # - send the data to the client (this data can be from a file or blocks of 0s)
 # - at the end, send a STOP COMMAND to the client and stop the log_extractor&cleaner
 
-
-
-#!/usr/bin/env python3
 import argparse
 import os
 import socket

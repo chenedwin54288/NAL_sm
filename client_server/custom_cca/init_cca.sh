@@ -68,3 +68,5 @@ else
   printf '\nWarning: %s was inserted, but it was not found in tcp_allowed_congestion_control.\n' "$MODULE_NAME" >&2
   exit 1
 fi
+
+# FIXME; run a short script that sets the limit of my_cca.c
