@@ -23,7 +23,7 @@ sudo tc qdisc del dev eno1 root 2>/dev/null
 
 # start the server.py with log_extractor turned ON
 # and with parameters (dataSize, selected cca)
-# FIXME: the server should output the client port number after the connection ends (write to a log file)
+# FIXME: the server should output the client port number and completion time after the connection ends (write to a log file)
 
 
 

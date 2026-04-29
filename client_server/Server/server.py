@@ -4,7 +4,7 @@
 #     python3 Server/server.py \
 #       --host 0.0.0.0 \
 #       --port 9000 \
-#       --size 1073741824 \
+#       --size 1 \
 #       --file client_server/1GB.zip
 #       --cca my_cca
 #     
@@ -84,7 +84,7 @@ def main():
     parser = argparse.ArgumentParser(description="Send 1 GiB (or custom size) to a single client.")
     parser.add_argument("--host", default="0.0.0.0", help="Bind host (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=9000, help="Bind port (default: 9000)")
-    parser.add_argument("--size", type=int, default=ONE_GIB, help="Bytes to send (default: 1 GiB)")
+    parser.add_argument("--size", type=int, default=ONE_GIB, help="GB to send (default: 1 GiB)")
     parser.add_argument("--file", default=None, help="File to stream (defaults to ../1GB.zip if present)")
     parser.add_argument("--cca", default="reno", help="Select the congestion control algorithm to use (default: reno)")
 
@@ -94,16 +94,17 @@ def main():
     args = parser.parse_args()
 
     file_path = args.file
+    args_size = args_size * ONE_GIB
     if file_path:
         file_size = os.path.getsize(file_path)
         if file_size == 0:
             raise SystemExit(f"File is empty: {file_path}")
-        if file_size < args.size:
-            print(f"Note: file smaller than size; will loop file to reach {args.size} bytes")
+        if file_size < args_size:
+            print(f"Note: file smaller than size; will loop file to reach {args_size} GB")
         else:
-            print(f"Streaming first {args.size} bytes from file: {file_path}")
+            print(f"Streaming first {args_size} GB from file: {file_path}")
     else:
-        print(f"Generating {args.size} bytes of zeros")
+        print(f"Generating {args_size} GB of zeros")
 
 
     log_process = None
@@ -129,9 +130,9 @@ def main():
 
                 start = time.time()
                 if file_path:
-                    total = send_from_file(conn, file_path, args.size)
+                    total = send_from_file(conn, file_path, args_size)
                 else:
-                    total = send_generated(conn, args.size)
+                    total = send_generated(conn, args_size)
                 
                 # STOP COMMAND to inform the client to terminate the connection
                 send_end_signal(conn)
