@@ -83,7 +83,7 @@ def start_log_extractor(context_file, interval):
 
 def main():
     parser = argparse.ArgumentParser(description="Send data to a single client.")
-    parser.add_argument("--host", default="0.0.0.0", help="Bind host (default: 0.0.0.0)")
+    parser.add_argument("--host", default="192.168.88.254", help="Bind host (default: 192.168.88.254)")
     parser.add_argument("--port", type=int, default=9000, help="Bind port (default: 9000)")
     parser.add_argument("--size", type=int, default=1, help="GiB to send (default: 1)")
     parser.add_argument("--file", default=None, help="File to stream (defaults to ../1GB.zip if present)")

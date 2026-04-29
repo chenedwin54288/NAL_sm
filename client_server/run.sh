@@ -1,5 +1,16 @@
 #!/usr/bin/env bash
 
+# Example command:  
+#    ./client_server/run.sh \
+#      --cca my_cca \
+#      --size-gib 3 \
+#      --rtt-ms 20 \
+#      --rate-mbit 100 \
+#      --tbf-rate 100mbit \
+#      --tbf-burst 32kbit \
+#      --tbf-limit 10000
+
+
 # Stop immediately on errors, unset variables, and failed pipeline commands.
 set -euo pipefail
 
@@ -152,6 +163,16 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+
+
+
+
+
+
+
+
+
+
 # Check required tools and project files before changing tc/module/server state.
 need_command python3
 need_command sudo
@@ -195,6 +216,20 @@ TMP_SUMMARY="$TMP_DIR/transfer_summary.json"
 TMP_SERVER_LOG="$TMP_DIR/server.log"
 mkdir -p "$TMP_DIR"
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Remove any existing root qdisc so every experiment starts from a known state.
 log "Resetting TBF on $DEV"
 sudo tc qdisc del dev "$DEV" root 2>/dev/null || true
@@ -212,6 +247,11 @@ if [[ "$CCA" == "my_cca" ]]; then
 else
   log "Using kernel CCA $CCA"
 fi
+
+# log_extractor.py may need sudo for dmesg on systems with kernel.dmesg_restrict=1.
+# Refresh sudo now so its non-interactive sudo calls can work while the server runs.
+log "Refreshing sudo access for dmesg log extraction"
+sudo -v
 
 # Build the server command as an array so paths and values with spaces stay safe.
 SERVER_CMD=(
@@ -247,6 +287,10 @@ FILTERED_CSV="$OUTPUT_DIR/filtered_context.csv"
 INFO_JSON="$OUTPUT_DIR/ip_info.json"
 CWND_PNG="$OUTPUT_DIR/cwnd_${CLIENT_IP//./_}_${CLIENT_PORT}.png"
 
+
+
+
+# BELOW will only be ran if my cca selection=="my_cca"
 # Save raw logs and metadata in the final DB location:
 #   DB/<size>/<size>_<client-port>_<cwnd>/
 log "Creating output directory $OUTPUT_DIR"

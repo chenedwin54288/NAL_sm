@@ -34,8 +34,20 @@ def run_command(command):
     )
 
 
+def should_retry_with_sudo(stderr):
+    return "Operation not permitted" in stderr or "Permission denied" in stderr
+
+
+def run_dmesg_command(*args):
+    result = run_command(["dmesg", *args])
+    if result.returncode == 0 or not should_retry_with_sudo(result.stderr):
+        return result
+
+    return run_command(["sudo", "-n", "dmesg", *args])
+
+
 def append_kernel_log(context_file):
-    result = run_command(["dmesg"])
+    result = run_dmesg_command()
 
     if result.returncode != 0:
         print(
@@ -55,7 +67,7 @@ def append_kernel_log(context_file):
 
 
 def clear_kernel_log():
-    result = run_command(["dmesg", "--clear"])
+    result = run_dmesg_command("--clear")
 
     if result.returncode != 0:
         print(
