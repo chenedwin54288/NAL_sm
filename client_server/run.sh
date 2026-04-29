@@ -11,13 +11,13 @@ sudo tc qdisc del dev eno1 root 2>/dev/null
 
 
 # 1> select the cca that we want to use
-# -> pass to init_cca.sh
 # -> pass to the server.py
 # 2> select the dataSieze we want the serve to send (1GB, 2GB, 3GB....)
 
 
 # if the cca == "my_cca"
 #    => run init_cca.sh with (optimal CWND)
+#    => init_cca.sh should take optimal CWND 
 # else:
 #    => do nothing
 
@@ -30,11 +30,14 @@ sudo tc qdisc del dev eno1 root 2>/dev/null
 # create a dir in DB with "{dataSize}/{dataSize}_{port}_{cwnd}"
 
 # Run filter_ip.py
+#   => filterted .txt file will be stored in "{dataSize}/{dataSize}_{port}_{cwnd}"
 # Run extract_ip_info.py 
-# Run filter_ip.py
+#   => filterted .csv file will be stored in "{dataSize}/{dataSize}_{port}_{cwnd}"
+# Run extract_ip_cwnd.py
+#   => created image will eb stored in "{dataSize}/{dataSize}_{port}_{cwnd}"
 
 
-# NOTE: this final step cpuld be further optimized
+# NOTE: this final step cpuld be further optimized, however for now we just stop
 # if completion time < prev completion time
 #   current rtt += 1
 #   start from line 13

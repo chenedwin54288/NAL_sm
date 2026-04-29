@@ -28,6 +28,7 @@ MODULE_INFO(retpoline, "Y");
 static const struct modversion_info ____versions[]
 __used __section("__versions") = {
 	{ 0x4efedfdd, "module_layout" },
+	{ 0x33227468, "param_ops_uint" },
 	{ 0xc3600a26, "tcp_unregister_congestion_control" },
 	{ 0xea9098d5, "tcp_register_congestion_control" },
 	{ 0x5b8239ca, "__x86_return_thunk" },
@@ -37,4 +38,4 @@ __used __section("__versions") = {
 MODULE_INFO(depends, "");
 
 
-MODULE_INFO(srcversion, "7F5A64D84B6F74986599D87");
+MODULE_INFO(srcversion, "FEFEC0CEBBB81EC388188E1");

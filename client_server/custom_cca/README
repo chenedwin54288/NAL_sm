@@ -13,6 +13,8 @@ sysctl net.ipv4.tcp_allowed_congestion_control
 
 # Set the custom algorithm as default
 # You can specify which protocol to use in Python as well (Better)
+# Once you run this and opne a TCP connection, all TCP connections will keep using 
+# your my_cca until it terminates 
 sudo sysctl -w net.ipv4.tcp_congestion_control=my_cca
 sudo dmesg -w
 ```

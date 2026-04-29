@@ -68,6 +68,10 @@ def clear_kernel_log():
     return True
 
 
+def clean_context_file(context_file):
+    context_file.write_text("", encoding="utf-8")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Repeatedly copy the kernel ring buffer to context.txt, then clear it."
@@ -87,6 +91,7 @@ def main():
 
     context_file = Path(args.context_file).resolve()
     context_file.parent.mkdir(parents=True, exist_ok=True)
+    clean_context_file(context_file)
 
     signal.signal(signal.SIGTERM, handle_stop)
     signal.signal(signal.SIGINT, handle_stop)

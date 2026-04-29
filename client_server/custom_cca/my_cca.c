@@ -6,12 +6,17 @@
 
 // https://www.yonch.com/tech/linux-tcp-congestion-control-internals
 
+
 #define pr_fmt(fmt) "TCP: " fmt
-#define APPLICATION_SPECIFIC_CWND_LIMIT 50
 
 #include <linux/module.h>
 #include <net/tcp.h>
 
+// allow cwnd_limit to be set when loading the kernel module
+// sudo insmod my_cca.ko cwnd_limit=80
+static u32 cwnd_limit = 50;
+module_param(cwnd_limit, uint, 0644);
+MODULE_PARM_DESC(cwnd_limit, "Maximum congestion window for my_cca");
 
 /* Map Linux TCP congestion-control states to readable strings for logging. */
 static const char *my_cca_ca_state_name(u8 state)
@@ -87,7 +92,7 @@ static u32 my_cca_slow_start(struct tcp_sock *tp, u32 acked)
 {
 	u32 prev_cwnd = tcp_snd_cwnd(tp);
 	u32 cwnd = min(prev_cwnd + acked, tp->snd_ssthresh);
-	cwnd = min(cwnd, APPLICATION_SPECIFIC_CWND_LIMIT);
+	cwnd = min(cwnd, cwnd_limit);
 	struct sock *sk = (struct sock *)tp;
 
 	acked -= cwnd - prev_cwnd;
@@ -126,7 +131,7 @@ static void my_cca_cong_avoid_ai(struct tcp_sock *tp, u32 w, u32 acked)
 	}
 
 	u32 new_cwnd = min(tcp_snd_cwnd(tp), tp->snd_cwnd_clamp);
-	tcp_snd_cwnd_set(tp, min(new_cwnd, APPLICATION_SPECIFIC_CWND_LIMIT));
+	tcp_snd_cwnd_set(tp, min(new_cwnd, cwnd_limit));
 
 	// if (tcp_snd_cwnd(tp) != prev_cwnd)
 	// 	my_cca_log_cwnd(sk, "congestion_avoidance", prev_cwnd);
