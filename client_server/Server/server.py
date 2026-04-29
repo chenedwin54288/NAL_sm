@@ -22,6 +22,7 @@
 # - at the end, send a STOP COMMAND to the client and stop the log_extractor&cleaner
 
 import argparse
+import json
 import os
 import socket
 import subprocess
@@ -81,20 +82,21 @@ def start_log_extractor(context_file, interval):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Send 1 GiB (or custom size) to a single client.")
+    parser = argparse.ArgumentParser(description="Send data to a single client.")
     parser.add_argument("--host", default="0.0.0.0", help="Bind host (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=9000, help="Bind port (default: 9000)")
-    parser.add_argument("--size", type=int, default=ONE_GIB, help="GB to send (default: 1 GiB)")
+    parser.add_argument("--size", type=int, default=1, help="GiB to send (default: 1)")
     parser.add_argument("--file", default=None, help="File to stream (defaults to ../1GB.zip if present)")
     parser.add_argument("--cca", default="reno", help="Select the congestion control algorithm to use (default: reno)")
 
     parser.add_argument("--log-extractor", action="store_true", help="Run the kernel log extractor during the transfer")
     parser.add_argument("--log-context-file", default=os.path.join(SCRIPT_DIR, "server_sub_process_1", "context.txt"), help="Output file for extracted kernel logs")
     parser.add_argument("--log-interval", type=float, default=0.5, help="Seconds between log extractions (default: 0.5)")
+    parser.add_argument("--summary-file", default=None, help="Write transfer summary JSON to this path")
     args = parser.parse_args()
 
     file_path = args.file
-    args_size = args_size * ONE_GIB
+    args_size = args.size * ONE_GIB
     if file_path:
         file_size = os.path.getsize(file_path)
         if file_size == 0:
@@ -140,6 +142,25 @@ def main():
 
                 mbps = (total / (CHUNK_SIZE)) / elapsed if elapsed > 0 else 0
                 print(f"Sent {total} bytes in {elapsed:.2f}s ({mbps:.2f} MiB/s)")
+
+                # Summarize the session information as a JSON 
+                # run.sh will pass it to AnalysisPhase
+                if args.summary_file:
+                    summary = {
+                        "cca": args.cca,
+                        "client_ip": addr[0],
+                        "client_port": addr[1],
+                        "elapsed_seconds": elapsed,
+                        "mib_per_second": mbps,
+                        "server_host": args.host,
+                        "server_port": args.port,
+                        "size_gib": args.size,
+                        "total_bytes": total,
+                    }
+                    os.makedirs(os.path.dirname(os.path.abspath(args.summary_file)), exist_ok=True)
+                    with open(args.summary_file, "w", encoding="utf-8") as summary_file:
+                        json.dump(summary, summary_file, indent=2)
+                        summary_file.write("\n")
     finally:
         if log_process is not None:
             log_process.terminate()
