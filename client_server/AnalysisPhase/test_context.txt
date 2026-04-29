@@ -2480,9 +2480,3 @@
 [676179.612842] TCP: my_cca: cwnd=84 rtt=667 phase=congestion_avoidance Destination: 128.178.122.39:53774
 [676179.613820] TCP: my_cca: cwnd=85 rtt=739 phase=congestion_avoidance Destination: 128.178.122.39:53774
 [676179.615003] TCP: my_cca: cwnd=86 rtt=710 phase=congestion_avoidance Destination: 128.178.122.39:53774
-[196970.454000] random kernel message that should not match
-[196970.454180] TCP: my_cca: set_state open(0)->open(0) cwnd=10 ssthresh=2147483647 phase=slow_start ca_state=open(0) Destination: 128.178.122.39:56988
-[196970.455244] TCP: my_cca: cwnd=10 rtt=206 phase=slow_start Destination: 128.178.122.39:56988
-[196970.455256] TCP: my_cca: cwnd=11 rtt=219 phase=slow_start Destination: 128.178.122.39:56988
-[196970.455300] unrelated TCP line without the needed fields
-[196971.100000] TCP: my_cca: cwnd=42 rtt=300 phase=congestion_avoidance Destination: 10.0.0.2:40000
