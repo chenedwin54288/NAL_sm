@@ -129,3 +129,78 @@ tc filter add dev eno1 parent ffff: protocol ip u32 match u32 0 0 action mirred 
   BDD = 0.0002s * 125mb = 0.025mb = 25kb = 25000 bytes
   The queue size is then set to "double of this" thus 50000 bytes 
 - Now two machines are connected together so rtt wouldn't be a problem
+
+
+# With entire new automation script:
+- now the server in this automation script will start a sub_process called log_extractor.py that extracts and cleans the kernel ring buffer in set intervals
+- the reason previously we didn't see the CWND starting from 10 was because we only extract the ring buffer at the end. Which by this time, some logs in the ring buffer has already been overwritten
+
+- the RTT is 0.400ms
+- **All tests below: sudo tc qdisc add dev eno1 root tbf rate 1Gbit burst 1mb limit 50000**
+
+## Test Auto 1: client_server/DB/1GB/1GB_44928_68
+- the CWND_LIMIT used here is: 68
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 1mb --tbf-limit 50000
+
+## Test Auto 2: client_server/DB/1GB/1GB_58816_66
+- the CWND_LIMIT used here is: 66
+-  ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 1mb --tbf-limit 50000 --cwnd 66
+- it seems like the ring buffer still got overwritten in this case, in the next test, **make the interval 0.25**
+
+## Test Auto 3: client_server/DB/1GB/1GB_45272_65
+-  ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 1mb --tbf-limit 50000 --cwnd 65 --log-interval 0.25
+- it seems like the ring buffer still got overwritten in this case, in the next test, **make the interval 0.05**
+
+## Test Auto 4: client_server/DB/1GB/1GB_34030_65
+-  ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 1mb --tbf-limit 50000 --cwnd 65 --log-interval 0.05
+- still the same problem, neeed to add "seq" in pr_info to check whether some sequence has been skipped or not
+
+## Test Auto 5: client_server/DB/1GB/1GB_57062_65
+-  ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 1mb --tbf-limit 50000 --cwnd 65 --log-interval 0.5
+- checked the seq and nothing is misssing, so there is no problem. I assume it is because I only do pr_info every 10 ACK received, and when the 10th CWND != prev 10th CWND
+
+
+## Test Auto 6: client_server/DB/1GB/1GB_42526_65
+- disable the "do pr_info every 10 ACK received, and when the 10th CWND != prev 10th CWND"
+-  ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 1mb --tbf-limit 50000 --cwnd 65 --log-interval 0.5
+- the seq didnt start from 0, some were lost (too much log-info printed) => **solution is to change the module to only log the CWND when the phase changes**
+
+
+
+## Test Auto 7: client_server/DB/1GB/1GB_59256_65
+- It seems like we are able to catch all the phase transition, however, more sample size required
+
+## Test Auto 8: client_server/DB/1GB/1GB_57558_65
+- Modified 'my_cca_pkts_acked()' to below
+```C
+	if (seq_num % 50 != 0 &&
+	    last_logged_phase && strcmp(phase, last_logged_phase) == 0)
+		return;
+``` 
+
+# log_extraction every 100 packets or when phase changes is quite optimal
+Every run below is tested with:
+- rtt-ms: 0.4
+- TBF Rate: 1Gb
+- TBF Burst: 1Mb
+- TBF limit: 50000
+- MSS: 1460
+Thus the calculated optimial cwnd is around 66.5 
+
+## Test Auto 9: client_server/DB/1GB/1GB_58342_65
+## Test Auto 10: client_server/DB/1GB/1GB_33586_65
+- increasing the `seq_num % 50` to **`seq_num % 100`**
+- the graph seems quite flat
+- cwnd: 65
+
+## Test Auto 11: client_server/DB/1GB/1GB_44976_66
+- cwnd: 66
+
+## Test Auto 12: 
+- cwnd: 67
+
+
+
+
+
+

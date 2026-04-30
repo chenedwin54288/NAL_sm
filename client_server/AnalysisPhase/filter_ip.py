@@ -26,6 +26,7 @@ DEFAULT_OUTPUT = SCRIPT_DIR / "filtered_context.csv"
 LOG_PATTERN = re.compile(
     r"""
     ^\[\s*(?P<timestamp>\d+\.\d+)\]      # [ 4215.320700]
+    (?:.*?seq=(?P<seq>\d+))?             # seq=123
     .*?cwnd=(?P<cwnd>\d+)                # cwnd=3069
     .*?Destination:\s+
     (?P<ip>[\d.]+)                       # 128.178.122.39
@@ -42,6 +43,7 @@ CA_PHASE_PATTERN = re.compile(r"\bphase=(?P<phase>[a-zA-Z_]+)(?:\(\d+\))?\b")
 FIELDNAMES = [
     "line_number",
     "timestamp",
+    "seq",
     "cwnd",
     "ip",
     "port",
@@ -89,6 +91,7 @@ def parse_line(line_number: int, line: str):
     return {
         "line_number": line_number,
         "timestamp": match.group("timestamp"),
+        "seq": match.group("seq") or "",
         "cwnd": match.group("cwnd"),
         "ip": match.group("ip"),
         "port": match.group("port"),

@@ -73,7 +73,7 @@ def parse_args() -> argparse.Namespace:
         "--start-row",
         "--start",
         type=int,
-        default=None,
+        default=1,
         help="First sample row to plot after filtering, 1-based and inclusive",
     )
     parser.add_argument(

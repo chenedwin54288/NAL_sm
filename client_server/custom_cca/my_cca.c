@@ -18,6 +18,9 @@ static u32 cwnd_limit = 50;
 module_param(cwnd_limit, uint, 0644);
 MODULE_PARM_DESC(cwnd_limit, "Maximum congestion window for my_cca");
 
+// TEMP: to detect kernel ring overwrite even with log_extractor sub process running
+static atomic64_t log_seq = ATOMIC64_INIT(0);
+
 /* Map Linux TCP congestion-control states to readable strings for logging. */
 static const char *my_cca_ca_state_name(u8 state)
 {
@@ -212,28 +215,33 @@ static u32 my_cca_undo_cwnd(struct sock *sk)
 static void my_cca_pkts_acked(struct sock *sk, const struct ack_sample *sample)
 {
 	struct tcp_sock *tp = tcp_sk(sk);
-	static u32 last_logged_cwnd;
-	static u32 count = 0;
+	static const char *last_logged_phase;
 	u32 cwnd = tcp_snd_cwnd(tp);
+	const char *phase = my_cca_phase_name(sk);
+	const s64 seq_num = atomic64_inc_return(&log_seq);
 
 	if (sample->rtt_us < 0)
 		return;
-	else if (count++ % 10 != 0)
-		return;
-	else if (cwnd == last_logged_cwnd)
-		return;
-	
 
-	last_logged_cwnd = cwnd;
+	if (seq_num % 100 != 0 &&
+	    last_logged_phase && strcmp(phase, last_logged_phase) == 0)
+		return;
+
+	last_logged_phase = phase;
 
 	const struct inet_sock *inet = inet_sk(sk);
 	__be32 dest_ip = inet->inet_daddr;
 	__be16 dest_port = inet->inet_dport;
-	
-	// // if (count++ % 10 == 0) { // Log every 10th change to reduce log volume
-	// pr_info("my_cca: cwnd=%u rtt=%d phase=%s Destination: %pI4:%d\n", cwnd, sample->rtt_us, my_cca_phase_name(sk), &dest_ip, ntohs(dest_port));
-	// // }
+
+	pr_info("my_cca: seq=%lld cwnd=%u rtt=%d phase=%s Destination: %pI4:%d\n",
+		seq_num,
+		cwnd,
+		sample->rtt_us,
+		phase,
+		&dest_ip,
+		ntohs(dest_port));
 }
+
 
 
 static struct tcp_congestion_ops my_cca __read_mostly = {

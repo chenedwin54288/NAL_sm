@@ -10,6 +10,8 @@
 #      --tbf-burst 32kbit \
 #      --tbf-limit 10000
 
+# ./run.sh --cca my_cca --size-gib 3 --rtt-ms 400 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 1mb --tbf-limit 50000 
+
 
 # Stop immediately on errors, unset variables, and failed pipeline commands.
 set -euo pipefail
@@ -38,6 +40,9 @@ TBF_BURST=""
 TBF_LIMIT=""
 CWND=""
 FILE_PATH=""
+
+DATA_START=1
+DATA_END=500
 
 # Print the supported command line options.
 usage() {
@@ -319,12 +324,15 @@ python3 "$EXTRACT_IP_INFO_PATH" \
   --output "$INFO_JSON"
 
 # Plot cwnd evolution for this transfer.
+# - not specifying "--start-row" and "--end-row" will plot everything and this will take a lot of time
 log "Creating CWND graph"
 python3 "$EXTRACT_IP_CWND_PATH" \
   --input "$FILTERED_CSV" \
   --output "$CWND_PNG" \
   --ip "$CLIENT_IP" \
-  --port "$CLIENT_PORT"
+  --port "$CLIENT_PORT" 
+  # --start-row 1 \
+  # --end-row 500
 
 # Final paths and key transfer info.
 log "Done"
