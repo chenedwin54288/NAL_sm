@@ -24,7 +24,7 @@ tc -s qdisc show dev eno1
 Increasing the queue size does not solve the plateu issue. This is because
 when the queue size is big, RTT will be longer (it takes longer for a packet to exit the queue). And since RTT ts longer, this means that the time we receive ACK will be longer as well. Since TCP only increases cwnd when it receives an ACK, this causes the plateau as shown in the figures above (**or maybe it could be caused by the receiver's recv_buffer being full (flow control) and the receiver sending recv_wnd == 0, telling the sender to stop**).
 
-![alt text](cc_fc.png)
+![alt text](research_images/cc_fc.png)
 
 Since RTT is around 0.144 ~ 0.242ms, BDP is around 25600 bits (3200 bytes), it might be better to try around with a queue size that is **2 to 4 times the BDP**. 
 
@@ -92,7 +92,7 @@ tc filter add dev eno1 parent ffff: protocol ip u32 match u32 0 0 action mirred 
  - `sudo ethtool -K eno1 gso off`
  - A software fallback for TSO. If the NIC doesn't support TSO, GSO segmentates large packets in the software just before passing them to the driver, supporting TCP, UDP, and IP tunnels
 
-![alt text](tso_gso.png)
+![alt text](research_images/tso_gso.png)
 
 - (Optional) Disable Generic Receive Offload for the incoming side
  - `sudo ethtool -K eno1 gro off`
@@ -187,8 +187,11 @@ Every run below is tested with:
 - MSS: 1460
 Thus the calculated optimial cwnd is around 66.5 
 
+
+
+# my_cca vs RENO for 1GB
 ## Test Auto 9: client_server/DB/1GB/1GB_58342_65
-## Test Auto 10: client_server/DB/1GB/1GB_33586_65
+##Test Auto 10: client_server/DB/1GB/1GB_33586_65
 - increasing the `seq_num % 50` to **`seq_num % 100`**
 - the graph seems quite flat
 - cwnd: 65
@@ -196,8 +199,127 @@ Thus the calculated optimial cwnd is around 66.5
 ## Test Auto 11: client_server/DB/1GB/1GB_44976_66
 - cwnd: 66
 
-## Test Auto 12: 
+## Test Auto 12: client_server/DB/1GB/1GB_43212_67
 - cwnd: 67
+
+## Test Auto 13: client_server/DB/1GB/1GB_49588_68
+- cwnd: 68 
+
+## Test Auto 14: client_server/DB/1GB/1GB_55398_69
+- cwnd: 69
+
+## Test Auto 15: client_server/DB/1GB/1GB_41200_70
+- cwnd: 70
+- it seems like, from cwnd: 68, we are quite over filling the queue
+
+## Test Auto 16: client_server/DB/1GB/1GB_58362_64
+- cwnd: 64
+
+## Test Auto 17: client_server/DB/1GB/1GB_39616_63
+- cwnd: 63
+
+## client_server/DB/1GB/1GB_43874_reno
+- elapsed time: 9.18
+## client_server/DB/1GB/1GB_35912_reno
+- elapsed time: 12.00
+
+Overall, it seems like sending 1GB, we cannot really see the time difference between RENO and my_cca. 
+Since `my_cca.c` is just a replica of RENO, and the only difference is that we set
+a `min(cwnd, cwnd_limit)`. When we want to test the normal reno, we could just discard 
+the `min(cwnd, cwnd_limit)` (if statement to do so when cwnd_limit==0 from `run.sh`).
+
+
+## Test Auto 18: client_server/DB/1GB/1GB_49584_0
+- elp time: 9.81s
+## Test Auto 19: client_server/DB/1GB/1GB_54842_0
+- elp time: 9.56s
+## Test Auto 20: client_server/DB/1GB/1GB_49888_0
+- elp time: 9.18s
+## Test Auto 21: client_server/DB/1GB/1GB_46904_0
+- elp time: 10.03s
+## Test Auto 22: client_server/DB/1GB/1GB_49736_0
+- elp time: 9.13s
+## Test Auto 23: client_server/DB/1GB/1GB_52914_0
+- elp time: 9.35s
+
+- Average time elapsed from Test Auto 18~23: 9.51s 
+(compared to optimal cwnd==67, where time was 9.20s, a bit slow?)
+
+# 1Gb -> 3Gb -> 5Gb -> 10Gb with TCP Reno and OPTIMAL_CWND[66], RTT[0.4], TBF_QUEUE[50000 bytes]
+
+## 1Gb
+- my_cca: client_server/DB/1GB/1GB_44976_66
+- my_cca: client_server/DB/1GB/1GB_60496_66
+- my_cca: client_server/DB/1GB/1GB_59712_66
+- reno: client_server/DB/1GB/1GB_49584_0
+- reno: client_server/DB/1GB/1GB_54842_0
+- reno: client_server/DB/1GB/1GB_49888_0
+
+## 3Gb
+- my_cca: client_server/DB/3GB/3GB_41720_66
+- my_cca: client_server/DB/3GB/3GB_53118_66
+- my_cca: client_server/DB/3GB/3GB_42416_66
+- reno: client_server/DB/3GB/3GB_52036_0
+- reno: client_server/DB/3GB/3GB_53844_0
+- reno: client_server/DB/3GB/3GB_50212_0
+
+## 5Gb
+- my_cca: client_server/DB/5GB/5GB_47564_66
+- my_cca: client_server/DB/5GB/5GB_39666_66
+- my_cca: client_server/DB/5GB/5GB_49806_66
+- reno: client_server/DB/5GB/5GB_39710_0
+- reno: client_server/DB/5GB/5GB_46362_0
+- reno: client_server/DB/5GB/5GB_43370_0
+
+## 10Gb
+- my_cca: client_server/DB/10GB/10GB_43516_66
+- my_cca: client_server/DB/10GB/10GB_49130_66
+- my_cca: client_server/DB/10GB/10GB_35696_66
+- reno: client_server/DB/10GB/10GB_40504_0
+- reno: client_server/DB/10GB/10GB_48670_0
+- reno: client_server/DB/10GB/10GB_41618_0
+
+The plotted result is as shown below. 
+![alt text](research_images/opt_cwnd_66_and_reno.png) 
+![alt text](research_images/opt_cwnd_66_and_reno_time.png)
+
+As it can be seen, although the optimized CWND is faster than the nornaml TCP Reno, it is not a lot faster. The difference is constantly around 0.5 seconds, which is different than 33% from the simulation. The biggest caused of this may be due to "large TBF queue size". As stated in the report, **"When the queue sizes are large, default TCP New Reno and TCP Cubic can match the algorithms' performance because the buffer can accommodate the size of the data that can fit on the link. The queue never empties, allowing the sender to continuously utilize the outgoing link"**. In the report, it also states that **"increasing the burst size does not influence throughput under the optimal cwnd algorithms"**
+
+- small TBF queue: cwnd keep increasing, buffer cannot accommodate, packets get dropped, performance decreases (TCP detects the drop and lowers the CWND size)
+- big TBF queue: cwnd keep increasing, buffer CAN accommodate
+
+![alt text](research_images/image1.png)
+![alt text](research_images/image4.png) 
+
+Thus, the best thing to do next is to change the buffer size to compare the performance. It's quite funny as for now, the queue size is 50000 bytes. And in the report it says that...
+![alt text](research_images/q_smaller_bdp.png) 
+**"Once the queue size reaches the BDP, the improvement drops to zero and remains at that level for larger queue sizes"**. In our case, <ins>we have been testing with a queue size of BDP * 2 or BDP, that is 50000 bytes</ins>.
+
+
+In addition, think about the application of this research (like under what condition will we have a hardware that has TBF with small queue size) and whether it is possible to demonstrate it. 
+
+
+# 1Gb -> 3Gb -> 5Gb -> 10Gb with TCP Reno and OPTIMAL_CWND[66], RTT[0.4], TBF_QUEUE[50000 bytes]
+From the graph, <ins>it seems when the burst size is extremely big (500,000 <), even for small TBF queue size, there is not much improvement</ins> (this wasn't explained in the report? but I think the reason why this happens is because, when the burst size is big, it can contain more token. During the time when the queue size is small, some packets will be dropped, and TCP reno will gradually start increasing the cwnd again. By this moment, the token bucket will be filled with so many tokens such that it is able to suddenly increase the throughput, eventually reaching the same performance as the optimal CWND)
+
+
+![alt text](research_images/image3.png) 
+
+Concluding all above, in thsi experiment, we will try with burst size of 50000, and TBF queue size of 3000 bytes (so 2 packets). The new optimal cwnd will be: (50000 + 5840 - 1460) / 1460 = 37.2 ~= 37 => in case do it with 36
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 3000
+- NOTE: for this experiment, <ins>we will disable the TSO (otherwise it will load ore than 3000 bytes at once to the TBF queue, causing the TBF queue to constantly requeue)</ins>... we tried sending 1GB without disabling TSO and it is taking tremendous amount of time... need to check whether this would effect the result
+- `sudo ethtool -K eno1 tso off`
+- `sudo ethtool -K eno1 gso off`
+
+
+
+
+
+
+
+
+
+
 
 
 

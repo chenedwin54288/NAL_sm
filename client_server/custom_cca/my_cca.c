@@ -14,9 +14,10 @@
 
 // allow cwnd_limit to be set when loading the kernel module
 // sudo insmod my_cca.ko cwnd_limit=80
+// cwnd_limit=0 disables the extra my_cca cap and leaves Reno-style cwnd growth.
 static u32 cwnd_limit = 50;
 module_param(cwnd_limit, uint, 0644);
-MODULE_PARM_DESC(cwnd_limit, "Maximum congestion window for my_cca");
+MODULE_PARM_DESC(cwnd_limit, "Maximum congestion window for my_cca; 0 disables the cap");
 
 // TEMP: to detect kernel ring overwrite even with log_extractor sub process running
 static atomic64_t log_seq = ATOMIC64_INIT(0);
@@ -44,6 +45,10 @@ static const char *my_cca_ca_state_name(u8 state)
  * Derive a higher-level phase label from the raw TCP CA state and whether
  * the flow is still below ssthresh.
  */
+// TCP_CA_Recovery starts -> likely packet loss detected by duplicate ACKs / SACK
+// TCP_CA_Loss starts     -> likely packet loss detected by timeout/RTO
+// TCP_CA_CWR starts      -> congestion response, often ECN or cwnd reduction, not always packet loss
+// FIXME: may need to make the definition clearer???
 static const char *my_cca_phase_name(const struct sock *sk)
 {
 	const struct tcp_sock *tp = tcp_sk(sk);
@@ -95,10 +100,12 @@ static u32 my_cca_slow_start(struct tcp_sock *tp, u32 acked)
 {
 	u32 prev_cwnd = tcp_snd_cwnd(tp);
 	u32 cwnd = min(prev_cwnd + acked, tp->snd_ssthresh);
-	cwnd = min(cwnd, cwnd_limit);
+	acked -= cwnd - prev_cwnd;
 	struct sock *sk = (struct sock *)tp;
 
-	acked -= cwnd - prev_cwnd;
+	if (cwnd_limit)
+		cwnd = min(cwnd, cwnd_limit);
+
 	tcp_snd_cwnd_set(tp, min(cwnd, tp->snd_cwnd_clamp));
 
 	// if (tcp_snd_cwnd(tp) != prev_cwnd)
@@ -114,6 +121,7 @@ static u32 my_cca_slow_start(struct tcp_sock *tp, u32 acked)
 static void my_cca_cong_avoid_ai(struct tcp_sock *tp, u32 w, u32 acked)
 {
 	u32 prev_cwnd = tcp_snd_cwnd(tp);
+	u32 new_cwnd;
 	struct sock *sk = (struct sock *)tp;
 
 	if (tp->snd_cwnd_cnt >= w) {
@@ -133,8 +141,12 @@ static void my_cca_cong_avoid_ai(struct tcp_sock *tp, u32 w, u32 acked)
 		tcp_snd_cwnd_set(tp, tcp_snd_cwnd(tp) + delta);
 	}
 
-	u32 new_cwnd = min(tcp_snd_cwnd(tp), tp->snd_cwnd_clamp);
-	tcp_snd_cwnd_set(tp, min(new_cwnd, cwnd_limit));
+	new_cwnd = min(tcp_snd_cwnd(tp), tp->snd_cwnd_clamp);
+
+	if (cwnd_limit)
+		new_cwnd = min(new_cwnd, cwnd_limit);
+
+	tcp_snd_cwnd_set(tp, new_cwnd);
 
 	// if (tcp_snd_cwnd(tp) != prev_cwnd)
 	// 	my_cca_log_cwnd(sk, "congestion_avoidance", prev_cwnd);

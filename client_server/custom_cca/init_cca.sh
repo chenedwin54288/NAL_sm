@@ -22,12 +22,16 @@ need_file() {
   fi
 }
 
-# Sets the CWND limit of my_cca.c
+# Sets the CWND limit of my_cca.c. 0 disables the extra my_cca cap.
 optimal_cwnd_size="${1:-}"
-if [[ "$optimal_cwnd_size" =~ ^[0-9]+$ ]] && (( optimal_cwnd_size > 0 )); then
-  log "Initializing my_cca with CWND: $optimal_cwnd_size"
+if [[ "$optimal_cwnd_size" =~ ^[0-9]+$ ]]; then
+  if (( optimal_cwnd_size == 0 )); then
+    log "Initializing my_cca with CWND cap disabled"
+  else
+    log "Initializing my_cca with CWND: $optimal_cwnd_size"
+  fi
 else
-  echo "Usage: $0 <positive-cwnd-limit>" >&2
+  echo "Usage: $0 <non-negative-cwnd-limit> (0 disables the cap)" >&2
   exit 1
 fi
 

@@ -59,7 +59,7 @@ Options:
   --file PATH             File to stream instead of generated zero bytes
   --log-interval SECONDS  Kernel log extraction interval (default: 0.5)
 
-  --cwnd N                Use this CWND limit directly for my_cca
+  --cwnd N                Use this CWND limit directly for my_cca; 0 disables the cap
   --rtt-ms N              RTT in milliseconds, used to calculate CWND
   --rate-mbit N           Rate in Mbit/s, used to calculate CWND
   --mss-bytes N           MSS in bytes for CWND calculation (default: 1460)
@@ -91,9 +91,13 @@ need_command() {
   command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
 }
 
-# Small validator for options that must be positive integers.
+# Small validators for integer options.
 is_positive_int() {
   [[ "$1" =~ ^[0-9]+$ ]] && (( "$1" > 0 ))
+}
+
+is_nonnegative_int() {
+  [[ "$1" =~ ^[0-9]+$ ]]
 }
 
 # Calculate CWND from bandwidth-delay product:
@@ -199,7 +203,7 @@ fi
 
 # my_cca needs a CWND limit. It can be passed directly or calculated from RTT/rate.
 if [[ -n "$CWND" ]]; then
-  is_positive_int "$CWND" || die "--cwnd must be a positive integer"
+  is_nonnegative_int "$CWND" || die "--cwnd must be a non-negative integer"
 elif [[ "$CCA" == "my_cca" ]]; then
   [[ -n "$RTT_MS" ]] || die "my_cca needs --cwnd or --rtt-ms with --rate-mbit"
   [[ -n "$RATE_MBIT" ]] || die "my_cca needs --cwnd or --rtt-ms with --rate-mbit"
@@ -247,7 +251,11 @@ fi
 
 # Load my_cca with the chosen CWND limit. Other CCAs are selected inside server.py.
 if [[ "$CCA" == "my_cca" ]]; then
-  log "Initializing my_cca with CWND limit $CWND"
+  if [[ "$CWND" == "0" ]]; then
+    log "Initializing my_cca with CWND limit disabled"
+  else
+    log "Initializing my_cca with CWND limit $CWND"
+  fi
   "$INIT_CCA_PATH" "$CWND"
 else
   log "Using kernel CCA $CCA"
@@ -287,7 +295,11 @@ CLIENT_PORT="$(json_field "$TMP_SUMMARY" client_port)"
 ELAPSED_SECONDS="$(json_field "$TMP_SUMMARY" elapsed_seconds)"
 DATA_LABEL="${DATA_SIZE_GIB}GB"
 CWND_LABEL="${CWND:-none}"
-OUTPUT_DIR="$DB_DIR/$DATA_LABEL/${DATA_LABEL}_${CLIENT_PORT}_${CWND_LABEL}"
+if [[ "$CCA" == "my_cca" ]]; then
+  OUTPUT_DIR="$DB_DIR/$DATA_LABEL/${DATA_LABEL}_${CLIENT_PORT}_${CWND_LABEL}"
+else
+  OUTPUT_DIR="$DB_DIR/$DATA_LABEL/${DATA_LABEL}_${CLIENT_PORT}_${CCA}"
+fi
 FILTERED_CSV="$OUTPUT_DIR/filtered_context.csv"
 INFO_JSON="$OUTPUT_DIR/ip_info.json"
 CWND_PNG="$OUTPUT_DIR/cwnd_${CLIENT_IP//./_}_${CLIENT_PORT}.png"
@@ -302,37 +314,43 @@ log "Creating output directory $OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 mv "$TMP_SUMMARY" "$OUTPUT_DIR/transfer_summary.json"
 mv "$TMP_SERVER_LOG" "$OUTPUT_DIR/server.log"
-if [[ -f "$TMP_CONTEXT" ]]; then
-  mv "$TMP_CONTEXT" "$OUTPUT_DIR/context.txt"
+
+if [[ "$CCA" == "my_cca" ]]; then
+  if [[ -f "$TMP_CONTEXT" ]]; then
+    mv "$TMP_CONTEXT" "$OUTPUT_DIR/context.txt"
+  else
+    : > "$OUTPUT_DIR/context.txt"
+  fi
+  rmdir "$TMP_DIR" 2>/dev/null || true
+
+
+  # Keep only cwnd log rows matching this client's IP and port.
+  log "Filtering kernel log for $CLIENT_IP:$CLIENT_PORT"
+  python3 "$FILTER_IP_PATH" \
+    --input "$OUTPUT_DIR/context.txt" \
+    --output "$FILTERED_CSV" \
+    --ip "$CLIENT_IP" \
+    --port "$CLIENT_PORT"
+
+  # Produce a JSON summary from the filtered CSV.
+  log "Extracting CSV summary"
+  python3 "$EXTRACT_IP_INFO_PATH" \
+    --input "$FILTERED_CSV" \
+    --output "$INFO_JSON"
+
+  # Plot cwnd evolution for this transfer.
+  # - not specifying "--start-row" and "--end-row" will plot everything and this will take a lot of time
+  # log "Creating CWND graph"
+  # python3 "$EXTRACT_IP_CWND_PATH" \
+  #   --input "$FILTERED_CSV" \
+  #   --output "$CWND_PNG" \
+  #   --ip "$CLIENT_IP" \
+  #   --port "$CLIENT_PORT" 
+    # --start-row 1 \
+    # --end-row 500
 else
-  : > "$OUTPUT_DIR/context.txt"
+  log "Using kernel CCA $CCA, AnalysisResult won't be ran."
 fi
-rmdir "$TMP_DIR" 2>/dev/null || true
-
-# Keep only cwnd log rows matching this client's IP and port.
-log "Filtering kernel log for $CLIENT_IP:$CLIENT_PORT"
-python3 "$FILTER_IP_PATH" \
-  --input "$OUTPUT_DIR/context.txt" \
-  --output "$FILTERED_CSV" \
-  --ip "$CLIENT_IP" \
-  --port "$CLIENT_PORT"
-
-# Produce a JSON summary from the filtered CSV.
-log "Extracting CSV summary"
-python3 "$EXTRACT_IP_INFO_PATH" \
-  --input "$FILTERED_CSV" \
-  --output "$INFO_JSON"
-
-# Plot cwnd evolution for this transfer.
-# - not specifying "--start-row" and "--end-row" will plot everything and this will take a lot of time
-log "Creating CWND graph"
-python3 "$EXTRACT_IP_CWND_PATH" \
-  --input "$FILTERED_CSV" \
-  --output "$CWND_PNG" \
-  --ip "$CLIENT_IP" \
-  --port "$CLIENT_PORT" 
-  # --start-row 1 \
-  # --end-row 500
 
 # Final paths and key transfer info.
 log "Done"
