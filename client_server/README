@@ -299,17 +299,19 @@ Thus, the best thing to do next is to change the buffer size to compare the perf
 In addition, think about the application of this research (like under what condition will we have a hardware that has TBF with small queue size) and whether it is possible to demonstrate it. 
 
 
-# 1Gb -> 3Gb -> 5Gb -> 10Gb with TCP Reno and OPTIMAL_CWND[66], RTT[0.4], TBF_QUEUE[50000 bytes]
+# 1Gb with TCP Reno and OPTIMAL_CWND[36], RTT[0.4], TBF_QUEUE[5840 bytes (4p)]
 From the graph, <ins>it seems when the burst size is extremely big (500,000 <), even for small TBF queue size, there is not much improvement</ins> (this wasn't explained in the report? but I think the reason why this happens is because, when the burst size is big, it can contain more token. During the time when the queue size is small, some packets will be dropped, and TCP reno will gradually start increasing the cwnd again. By this moment, the token bucket will be filled with so many tokens such that it is able to suddenly increase the throughput, eventually reaching the same performance as the optimal CWND)
 
 
 ![alt text](research_images/image3.png) 
 
-Concluding all above, in thsi experiment, we will try with burst size of 50000, and TBF queue size of 3000 bytes (so 2 packets). The new optimal cwnd will be: (50000 + 5840 - 1460) / 1460 = 37.2 ~= 37 => in case do it with 36
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 3000
+Concluding all above, in this experiment, we will try with burst size of 50000, and TBF queue size of 3000 bytes (so 2 packets). The new optimal cwnd will be: (50000 + 5840 - 1460) / 1460 = 37.2 ~= 37 => in case do it with 36
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 5840 --cwnd 36
 - NOTE: for this experiment, <ins>we will disable the TSO (otherwise it will load ore than 3000 bytes at once to the TBF queue, causing the TBF queue to constantly requeue)</ins>... we tried sending 1GB without disabling TSO and it is taking tremendous amount of time... need to check whether this would effect the result
 - `sudo ethtool -K eno1 tso off`
 - `sudo ethtool -K eno1 gso off`
+- client_server/DB/1GB/1GB_49346_36 (**342.28s**)
+- client_server/DB/1GB/1GB_59160_0  (**285.02s**)
 
 
 
