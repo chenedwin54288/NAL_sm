@@ -340,14 +340,14 @@ if [[ "$CCA" == "my_cca" ]]; then
 
   # Plot cwnd evolution for this transfer.
   # - not specifying "--start-row" and "--end-row" will plot everything and this will take a lot of time
-  # log "Creating CWND graph"
-  # python3 "$EXTRACT_IP_CWND_PATH" \
-  #   --input "$FILTERED_CSV" \
-  #   --output "$CWND_PNG" \
-  #   --ip "$CLIENT_IP" \
-  #   --port "$CLIENT_PORT" 
-    # --start-row 1 \
-    # --end-row 500
+  log "Creating CWND graph"
+  python3 "$EXTRACT_IP_CWND_PATH" \
+    --input "$FILTERED_CSV" \
+    --output "$CWND_PNG" \
+    --ip "$CLIENT_IP" \
+    --port "$CLIENT_PORT" \
+    --start-row 1 \
+    --end-row 500
 else
   log "Using kernel CCA $CCA, AnalysisResult won't be ran."
 fi

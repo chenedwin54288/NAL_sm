@@ -305,6 +305,8 @@ From the graph, <ins>it seems when the burst size is extremely big (500,000 <), 
 
 ![alt text](research_images/image3.png) 
 
+
+## Testing with the case where queue_size < BDD, burst_size == 50000
 Concluding all above, in this experiment, we will try with burst size of 50000, and TBF queue size of 3000 bytes (so 2 packets). The new optimal cwnd will be: (50000 + 5840 - 1460) / 1460 = 37.2 ~= 37 => in case do it with 36
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 5840 --cwnd 36
 - NOTE: for this experiment, <ins>we will disable the TSO (otherwise it will load ore than 3000 bytes at once to the TBF queue, causing the TBF queue to constantly requeue)</ins>... we tried sending 1GB without disabling TSO and it is taking tremendous amount of time... need to check whether this would effect the result
@@ -312,6 +314,250 @@ Concluding all above, in this experiment, we will try with burst size of 50000, 
 - `sudo ethtool -K eno1 gso off`
 - client_server/DB/1GB/1GB_49346_36 (**342.28s**)
 - client_server/DB/1GB/1GB_59160_0  (**285.02s**)
+
+The performance of the optimal algorithm was way worse than TCP Reno. Thus, we will try with 1/2 the BDD size to see what happens (from the graph above, the performance doesn't seem to be too bad for this). The new optimal cwnd will be: (50000 + 25000 - 1460) / 1460 = 50.369 ~= 50 => in case do it with 49
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 49
+- /client_server/DB/1GB/1GB_52870_49 (**11.238548278808594s**)
+- /client_server/DB/1GB/1GB_37326_0 (**9.724140644073486s**)
+
+The optimal cwnd is still worse than the TCP Reno. => *Does this mean that the simulation was wrong?*
+Since the average RTT for this setup is 0.3 ms, we will recalculate the BDD again. (0.0003 * 1,000,000,000) / 8 = 37500 bytes. (37500 + 25000 - 1460) / 1460 = 41.81 ~= 42 => in case do it with 41
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.3 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 41
+- client_server/DB/1GB/1GB_53558_41 (**15.097843885421753**)
+
+It's actually slower...
+
+## Testing with the case where queue_size > BDD, burst_size == 50000
+We will try with the queue_size of 50000 bytes first. The new optimal cwnd will be: (50000 + 75000 - 1460) / 1460 = 84.616 ~= 85 => in case do it with 84
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 75000 --cwnd 84
+- client_server/DB/1GB/1GB_54644_84 (**9.198986768722534**)
+- client_server/DB/1GB/1GB_54864_85 (**9.141910314559937**)
+- client_server/DB/1GB/1GB_47416_86 (**9.126748323440552**) <- optimal?
+- client_server/DB/1GB/1GB_58224_87 (**9.130571365356445**)
+- client_server/DB/1GB/1GB_56684_90 (**9.133797645568848**)
+- client_server/DB/1GB/1GB_54220_0 (**9.188273906707764**)
+
+It seems like the queue_size always has to be >= BDD in order for the optimal cwnd to achieve a better result. Another influencing factor might be the **token generation rate**. In the simulation, the link had a bandwidth of 200Mbps and token generation rate of 20Mbps. 
+
+![alt text](research_images/bd_higher_than_tk_gen.png) 
+
+In our case, the link bandwidth is 1GB and the token generation rate is 1GB as well. <ins>If the token generation rate and the link bandwidth are identical, the bucket will generally remain empty (or very near zero) while you are actively transmitting at full speed</ins>
+
+
+
+
+## Testing with the case where queue_size < BDD, burst_size == 5840, and tk_gen == link_bandwidth
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 5840b  --tbf-limit 5840 --cwnd 36
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 5840b  --tbf-limit 5840 --cwnd 35
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 5840b  --tbf-limit 5840 --cwnd 34
+
+- client_server/DB/1GB/1GB_57092_36 (**19.59613847732544s**) 
+- client_server/DB/1GB/1GB_52522_35 (**19.475783586502075s**)
+- client_server/DB/1GB/1GB_48820_34 (**18.959990978240967s**)
+
+- client_server/DB/1GB/1GB_52480_0 (**19.10539174079895s**)
+- client_server/DB/1GB/1GB_45968_0 (**18.9735107421875s**)
+
+
+## Testing with the case where queue_size < BDD, burst_size == 50000, and tk_gen == link_bandwidth (no bottleneck!!!), queue_size = BDP / 2 
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 0
+- client_server/DB/1GB/1GB_54626_0 (**10.03s**)
+![alt text](DB/1GB/1GB_54626_0/cwnd_192_168_88_253_54626.png)
+
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 50
+- (50000 + 25000 - 1460) / 1460 = 50.369 ~= 50
+- client_server/DB/1GB/1GB_51630_50 (**10.309355974197388**)
+![alt text](DB/1GB/1GB_51630_50/cwnd_192_168_88_253_51630.png)
+![alt text](DB/1GB/1GB_51630_50/output.png)
+
+**cwnd==50 seems to be too big. Trying to find the optimized cwnd emprically:**
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 30
+- client_server/DB/1GB/1GB_57104_30 (**9.152894258499146**)
+![alt text](DB/1GB/1GB_57104_30/cwnd_192_168_88_253_57104.png)
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 31
+- client_server/DB/1GB/1GB_42664_31 (**9.136432886123657**)
+![alt text](DB/1GB/1GB_42664_31/cwnd_192_168_88_253_42664.png)
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 32
+- client_server/DB/1GB/1GB_50986_32 (**9.14066767692566**)
+![alt text](DB/1GB/1GB_50986_32/cwnd_192_168_88_253_50986.png)
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 33
+- client_server/DB/1GB/1GB_33200_33 (**9.202217817306519**)
+![alt text](DB/1GB/1GB_33200_33/cwnd_192_168_88_253_33200.png )
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 34
+- client_server/DB/1GB/1GB_34886_34 (**9.608474731445312**)
+![alt text](DB/1GB/1GB_34886_34/cwnd_192_168_88_253_34886.png)
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 35
+- client_server/DB/1GB/1GB_47366_35 (**9.611674070358276**)
+![alt text](DB/1GB/1GB_47366_35/cwnd_192_168_88_253_47366.png)
+
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 36
+- client_server/DB/1GB/1GB_35612_36 (**11.32345199584961**)
+![alt text](/DB/1GB/1GB_35612_36/cwnd_192_168_88_253_35612.png)
+
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 37
+- client_server/DB/1GB/1GB_41178_37 (**10.962607860565186**)
+![alt text](DB/1GB/1GB_41178_37/cwnd_192_168_88_253_41178.png)
+
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 38
+- client_server/DB/1GB/1GB_52996_38 (**9.85909628868103**)
+![alt text](DB/1GB/1GB_52996_38/cwnd_192_168_88_253_52996.png)
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 39
+- client_server/DB/1GB/1GB_41800_39 (**10.063297986984253**)
+![alt text](DB/1GB/1GB_41800_39/cwnd_192_168_88_253_41800.png)
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 50000b  --tbf-limit 25000 --cwnd 40
+- client_server/DB/1GB/1GB_51392_40 (**9.90705394744873**)
+![alt text](DB/1GB/1GB_51392_40/cwnd_192_168_88_253_51392.png)
+
+
+It seems like the optiaml cwnd for, **RTT: 0.4ms, BandWidth: 1Gbits, TokenGenerationRate(TBF): 1Gbits, BurstSize(TBF): 50000bytes, QueueSize(TBF): 25000bytes** is **31**. <ins>The theoretical optimal cwnd was **50**</ins>
+![alt text](AnalysisResult/CwndLoss/cwnd_loss_corr_1GB_30_50.png)
+![alt text](AnalysisResult/CwndTime/cwnd_elp_time_corr_1GB_30_50.png)
+
+
+## Testing with the case where queue_size < BDD, burst_size == 50000, and tk_gen == link_bandwidth / 10, queue_size = BDP
+
+
+
+## Testing with the case where queue_size < BDD, burst_size == 50000, and tk_gen == link_bandwidth / 10, queue_size = BDP / 2 
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 12500 --cwnd 0
+- client_server/DB/1GB/1GB_60320_0 (**18.264824151992798**)
+![alt text](DB/1GB/1GB_60320_0/cwnd_192_168_88_253_60320.png)
+
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 12500 --cwnd 24
+- Calculation based on token generation rate
+  - BDD: (500,000,000 / 8) * 0.0004 == 25000  
+  - (25000 + 12500 - 1460) / 1460 ~= 24.6849 => 24
+  - TBF queue size is half the BDD so 12500 bytes
+- client_server/DB/1GB/1GB_41490_24 (**18.25220513343811**)
+![alt text](DB/1GB/1GB_41490_24/cwnd_192_168_88_253_41490.png)
+
+
+**cwnd==24 seems to be too big. Trying to find the optimized cwnd emprically:**
+In addition to this, after checking the server.log, the server.log seems to send the data in 56.06 MiB/s?
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 12500 --cwnd 11
+- client_server/DB/1GB/1GB_42166_11 (**18.04136562347412**)
+![alt text](DB/1GB/1GB_42166_11/cwnd_192_168_88_253_42166.png)
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 12500 --cwnd 10
+- client_server/DB/1GB/1GB_46838_10 (**18.058275938034058**)
+![alt text](DB/1GB/1GB_46838_10/cwnd_192_168_88_253_46838.png)
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 12500 --cwnd 9
+- client_server/DB/1GB/1GB_32868_9 (**18.064457893371582**)
+![alt text](DB/1GB/1GB_32868_9/cwnd_192_168_88_253_32868.png)
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 12500 --cwnd 8
+- client_server/DB/1GB/1GB_44262_8 (**18.104425191879272**)
+![alt text](DB/1GB/1GB_44262_8/cwnd_192_168_88_253_44262.png)
+
+
+It seems like the optiaml cwnd for, **RTT: 0.4ms, BandWidth: 1Gbits, TokenGenerationRate(TBF): 500Mbits, BurstSize(TBF): 50000bytes, QueueSize(TBF): 12500bytes** is **8** or **9**. <ins>The theoretical optimal cwnd was **24**</ins>
+
+![alt text](AnalysisResult/CwndLoss/cwnd_loss_corr_1GB_8_24.png)
+![alt text](AnalysisResult/CwndTime/cwnd_elp_time_corr_1GB_8_24.png)
+
+
+## Testing with the case where queue_size < BDD, burst_size == 50000, and tk_gen == link_bandwidth / 10, queue_size = BDP / 4
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250 --cwnd 0
+- client_server/DB/1GB/1GB_37272_0 (**138.334876537323**)
+![alt text](DB/1GB/1GB_37272_0/cwnd_192_168_88_253_37272.png)
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250 --cwnd 20
+- Calculation based on token generation rate
+  - BDD: (500,000,000 / 8) * 0.0004 == 25000  
+  - (25000 + 6250 - 1460) / 1460 ~= 20.404 => 20
+  - TBF queue size is 1/4 the BDD so 6250 bytes
+- client_server/DB/1GB/1GB_58044_20 (**138.85342288017273**)
+![alt text](DB/1GB/1GB_58044_20/cwnd_192_168_88_253_58044.png)
+
+
+**cwnd==20 seems to be too big. Trying to find the optimized cwnd emprically:**
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250 --cwnd 10
+- client_server/DB/1GB/1GB_56648_10 (**104.77317476272583**)
+![alt text](DB/1GB/1GB_56648_10/cwnd_192_168_88_253_56648.png)
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250 --cwnd 9
+- client_server/DB/1GB/1GB_50138_9 (**18.38742709159851**)
+![alt text](DB/1GB/1GB_50138_9/cwnd_192_168_88_253_50138.png)
+**This one seems too fast??? Why?**
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250 --cwnd 8
+- client_server/DB/1GB/1GB_54170_8 (**18.275747299194336**)
+![alt text](DB/1GB/1GB_54170_8/cwnd_192_168_88_253_54170.png)
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250 --cwnd 7
+- client_server/DB/1GB/1GB_41402_7 (**18.33869767189026**)
+![alt text](DB/1GB/1GB_41402_7/cwnd_192_168_88_253_41402.png)
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250 --cwnd 6
+- client_server/DB/1GB/1GB_54302_6 (**18.261809587478638**)
+![alt text](DB/1GB/1GB_54302_6/cwnd_192_168_88_253_54302.png)
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250 --cwnd 5
+- client_server/DB/1GB/1GB_33110_5 (**19.121744871139526**)
+![alt text](DB/1GB/1GB_33110_5/cwnd_192_168_88_253_33110.png)
+
+
+It seems like the optiaml cwnd for, **RTT: 0.4ms, BandWidth: 1Gbits, TokenGenerationRate(TBF): 500Mbits, BurstSize(TBF): 50000bytes, QueueSize(TBF): 6250bytes** is **5** or **6**. <ins>The theoretical optimal cwnd was **20**</ins>
+![alt text]()
+![alt text]()
+
+<ins>So actually, the simulation was correct? However, the optimal window calculation equation has to be modified (or maybe the optimal window calculation has always been realtime in the simulation)?</ins>
+
+
+## Testing with the case where queue_size < BDD, burst_size == 50000, and tk_gen == link_bandwidth / 10 -> see whether changing burstSize would change the time
+
+
+
+
+
+## Testing with the case where queue_size < BDD, burst_size == 5840, and tk_gen == link_bandwidth
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 5840b  --tbf-limit 25000 --cwnd 50
+- (50000 + 25000 - 1460) / 1460 = 50.369 ~= 50
+
+- client_server/DB/1GB/1GB_45596_36 (**9.487105369567871**)
+![alt text](DB/1GB/1GB_45596_36/cwnd_192_168_88_253_45596.png)
+- client_server/DB/1GB/1GB_57354_0 (**9.676437139511108**)
+![alt text](DB/1GB/1GB_57354_0/cwnd_192_168_88_253_57354.png)
+
+
+## Testing with the case where queue_size < BDD, burst_size == 2920, and tk_gen == link_bandwidth
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 2920b  --tbf-limit 25000 --cwnd 50
+- (50000 + 25000 - 1460) / 1460 = 50.369 ~= 50
+
+- client_server/DB/1GB/1GB_50654_36 (**10.140377521514893**)
+![alt text](DB/1GB/1GB_50654_36/cwnd_192_168_88_253_50654.png)
+- client_server/DB/1GB/1GB_35864_50 (**10.226438999176025**)
+![alt text](DB/1GB/1GB_35864_50/cwnd_192_168_88_253_35864.png)
+
+- client_server/DB/1GB/1GB_48176_0 (**10.292309522628784**)
+![alt text](DB/1GB/1GB_48176_0/cwnd_192_168_88_253_48176.png)
+
+it seems like when the burst size is small, the first algorithm (DD + queue_size - MSS) does not really work?
+How about the second algorithm?
+
+
+
+
+
+
+
 
 
 

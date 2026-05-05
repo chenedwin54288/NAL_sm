@@ -19,14 +19,13 @@ import matplotlib.pyplot as plt
 #     "client_server/DB/1GB/1GB_44976_66",
 # ]
 DATABASE_PATHS = [
-    "client_server/DB/1GB/1GB_39616_63",
-    "client_server/DB/1GB/1GB_58362_64",
-    "client_server/DB/1GB/1GB_58342_65",
-    "client_server/DB/1GB/1GB_44976_66",
-    "client_server/DB/1GB/1GB_43212_67",
-    "client_server/DB/1GB/1GB_49588_68",
-    "client_server/DB/1GB/1GB_55398_69",
-    "client_server/DB/1GB/1GB_41200_70"
+   "client_server/DB/1GB/1GB_58044_20",
+   "client_server/DB/1GB/1GB_56648_10",
+   "client_server/DB/1GB/1GB_50138_9",
+   "client_server/DB/1GB/1GB_54170_8",
+   "client_server/DB/1GB/1GB_41402_7",
+   "client_server/DB/1GB/1GB_54302_6",
+   "client_server/DB/1GB/1GB_33110_5"
 ]
 
 
@@ -56,7 +55,7 @@ def read_loss_rate(database_path: Path) -> float:
     if row_count == 0:
         raise ValueError(f"row_count is zero in {ip_info_path}")
 
-    loss_recovery = ip_info["phase_counts"]["loss_recovery"]
+    loss_recovery = ip_info["phase_counts"].get("loss_recovery", 0)
     return loss_recovery / row_count
 
 
