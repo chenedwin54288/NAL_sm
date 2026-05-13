@@ -243,10 +243,33 @@ mkdir -p "$TMP_DIR"
 log "Resetting TBF on $DEV"
 sudo tc qdisc del dev "$DEV" root 2>/dev/null || true
 
+
 # Optionally apply a new Token Bucket Filter for this experiment.
 if [[ -n "$TBF_RATE" ]]; then
   log "Applying TBF: rate=$TBF_RATE burst=$TBF_BURST limit=$TBF_LIMIT"
   sudo tc qdisc add dev "$DEV" root tbf rate "$TBF_RATE" burst "$TBF_BURST" limit "$TBF_LIMIT"
+  sudo ethtool -K eno1 tso off
+  sudo ethtool -K eno1 gso off
+  
+  
+
+  # # 1. Add the TBF qdisc as the root
+  # sudo tc qdisc add dev "$DEV" root handle 1: tbf \
+  #     rate "$TBF_RATE" \
+  #     burst "$TBF_BURST" \
+  #     limit "$TBF_LIMIT"
+
+  # # 2. Add the 1ms delay as a child of the TBF qdisc
+  # sudo tc qdisc add dev "$DEV" parent 1: handle 10: netem delay 1ms limit 1000
+
+  # # 1. Root netem with a custom queue size (4p = 5840)
+  # sudo tc qdisc add dev "$DEV" root handle 1: netem delay 1ms limit 4
+
+  # # 2. Child TBF (this has its own 'limit' for rate-limiting)
+  # sudo tc qdisc add dev "$DEV" parent 1: handle 10: tbf \
+  #     rate "$TBF_RATE" \
+  #     burst "$TBF_BURST" \
+  #     limit 1480b
 fi
 
 # Load my_cca with the chosen CWND limit. Other CCAs are selected inside server.py.

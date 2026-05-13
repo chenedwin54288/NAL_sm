@@ -526,51 +526,95 @@ It seems like the optiaml cwnd for, **RTT: 0.4ms, BandWidth: 1Gbits, TokenGenera
 
 
 
+## Setting custom delay  1ms
+### Method 1: on server side
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 1.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 21900b  --cwnd 0
+- Calculation:
+ - RTT: 1.4ms (netem 1ms delay)
+ - TBF-token-gen_rate: 500Mbits
+ - TBF-queue size: 21900b
+ - TBF-BurstSize: 50000b
+ - BDP: 87500 bytes => thus queue_size BDP/4 is around 21900bytes
+- And the delay setup where both tbf (parent) and netem (child) has queue size of 15p
+- client_server/DB/1GB/1GB_59344_0 (22.25)
+![alt text](DB/1GB/1GB_59344_0/cwnd_192_168_88_253_59344.png)
 
-## Testing with the case where queue_size < BDD, burst_size == 5840, and tk_gen == link_bandwidth
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 5840b  --tbf-limit 25000 --cwnd 50
-- (50000 + 25000 - 1460) / 1460 = 50.369 ~= 50
 
-- client_server/DB/1GB/1GB_45596_36 (**9.487105369567871**)
-![alt text](DB/1GB/1GB_45596_36/cwnd_192_168_88_253_45596.png)
-- client_server/DB/1GB/1GB_57354_0 (**9.676437139511108**)
-![alt text](DB/1GB/1GB_57354_0/cwnd_192_168_88_253_57354.png)
-
-
-## Testing with the case where queue_size < BDD, burst_size == 2920, and tk_gen == link_bandwidth
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1Gbit --tbf-burst 2920b  --tbf-limit 25000 --cwnd 50
-- (50000 + 25000 - 1460) / 1460 = 50.369 ~= 50
-
-- client_server/DB/1GB/1GB_50654_36 (**10.140377521514893**)
-![alt text](DB/1GB/1GB_50654_36/cwnd_192_168_88_253_50654.png)
-- client_server/DB/1GB/1GB_35864_50 (**10.226438999176025**)
-![alt text](DB/1GB/1GB_35864_50/cwnd_192_168_88_253_35864.png)
-
-- client_server/DB/1GB/1GB_48176_0 (**10.292309522628784**)
-![alt text](DB/1GB/1GB_48176_0/cwnd_192_168_88_253_48176.png)
-
-it seems like when the burst size is small, the first algorithm (DD + queue_size - MSS) does not really work?
-How about the second algorithm?
+### Method 2: on client side
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 1.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 21900b  --cwnd 0
+- The delay setup where client side has delay queue of 1000p
+- And the TBF setup same as before
+- client_server/DB/1GB/1GB_33686_0 (57.24379539489746)
+![alt text](DB/1GB/1GB_33686_0/cwnd_192_168_88_253_33686.png)
 
 
 
 
 
+## BDP (25000 bytes) < queue_size (50000)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 50000b  --cwnd 50
+- client_server/DB/1GB/1GB_48896_50 (**18.23s**)
+- Comparison:
+  - theoretical: (25000 + 50000 - 1460) / 1460 ~= 50
+  - emperical: 33 ~ 34
+![alt text](DB/1GB/1GB_48896_50/cwnd_192_168_88_253_48896.png)
 
 
 
+## BDP (25000 bytes) == queue_size (25000)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 25000b  --cwnd 33
+- client_server/DB/1GB/1GB_44934_33 (**18.27s**)
+- Comparison:
+  - theoretical: (25000 + 25000 - 1460) / 1460 ~= 33
+  - emperical: 16 ~ 17.5
+![alt text](DB/1GB/1GB_44934_33/cwnd_192_168_88_253_44934.png)
 
 
+When we did with {rtt-ms: 0.4}, {TBF Rate: 1Gb}, {TBF Burst: 1Mb}, {TBF limit: 50000}, {MSS: 1460}, the optimal window size worked. changing the burst size to see what happens here we make it from 50,000b => 1Mb (1,000,000b) so 20 times more
+
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 1Mb  --tbf-limit 25000b  --cwnd 33
+-  client_server/DB/1GB/1GB_41714_33 (**17.94s**)
+- Comparison:
+  - theoretical: (25000 + 25000 - 1460) / 1460 ~= 33
+  - emperical: 20
+- Note here, as it can be seen from the graph, for the first several ms, we were staying at tbe theoretical optimal window size 33
+![alt text](DB/1GB/1GB_41714_33/cwnd_192_168_88_253_41714.png)
 
 
+Maybe the token generation rate also matters? Running another test with the initial setup: **{rtt-ms: 0.4}, {TBF Rate: 1Gb}, {TBF Burst: 1Mb}, {TBF limit: 50000}, {MSS: 1460}** again.
+
+Using the normal TCP Reno we get:
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 1Mb  --tbf-limit 50000b  --cwnd 0
+- client_server/DB/1GB/1GB_47786_0 (**9.69s**)
+![alt text](DB/1GB/1GB_47786_0/cwnd_192_168_88_253_47786.png)
+
+Using the optimal cwnd we get:
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 1Mb  --tbf-limit 50000b  --cwnd 67
+- Comparison:
+  - theoretical: (50000 + 50000 - 1460) / 1460 ~= 67
+  - emperical: 66~67
+- client_server/DB/1GB/1GB_50912_67 (**9.27s**)
+![alt text](DB/1GB/1GB_50912_67/cwnd_192_168_88_253_50912.png)
+
+It seems like the optimal cwnd is "more optimal" under the case that token-generation rate is 1Gbit. We also want to check whether changing the burstSize back to 50000b will cause any difference.
+
+Using the normal TCP Reno we get:
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b  --tbf-limit 50000b  --cwnd 0
+- client_server/DB/1GB/1GB_38042_0 (**9.30s**)
+![alt text](DB/1GB/1GB_38042_0/cwnd_192_168_88_253_38042.png)
 
 
+Using the optimal cwnd we get:
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b  --tbf-limit 50000b  --cwnd 67
+- Comparison:
+  - theoretical: (50000 + 50000 - 1460) / 1460 ~= 67
+  - emperical: 64~67???
+- client_server/DB/1GB/1GB_42250_67 (**9.40s**)
+![alt text](DB/1GB/1GB_42250_67/cwnd_192_168_88_253_42250.png)
 
 
+Yes, even when the burst size is set to 50000 bytes, the "optimal window" size seems to be still optimal. Meaning that, the token generate rate indeed matters. But HOW DOES THIS EFFECT THE optimal cwnd equation?
 
-
-
-
-
+## BDP (25000 bytes) < queue_size (25000)
 
 
