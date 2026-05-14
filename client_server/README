@@ -687,12 +687,14 @@ R_arrival = (25000B + 25000B) * 8 / 0.0004 = 1Gbit
 
 But what happens when **burst_penality > Q_effective**? In this case, <ins> the queue is so small that the sender cannot safely keep a full BDP in flight, because the TBF cannot absorb the burst mismatch.</ins> 
 
-For instance when you have --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250, the burst penality is 25000B, but you only have 6250 bytes for the TBF queue, and it is not enough to contain the incoming accumulating packets due to the RTT. Most of the packets will be DROPPED, and the useful BDP will decrease, as we cannot fully utilize the link_bandwidth
+For instance when you have --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250, the burst penality is 25000B, but you only have 6250 bytes for the TBF queue, and it is not enough to contain the incoming accumulating packets due to the RTT. Most of the packets will overflow, and the sender cannot safely keep `BDP` bytes in flight. The optimal cwnd must be smaller than the BDP-based value, because part of the sending window must be sacrificed to avoid TBF drops caused by bursty enqueue behavior.
 
 This explains the case 
 
 In conclusion:
 ```
+burst_penality = (R_arrival - R_tbf) * RTT
+
 if burst_penalty <= Q_config:
     Q_effective = Q_config - burst_penalty
     cwnd = floor((BDP + Q_effective - MSS) / MSS)
@@ -700,13 +702,55 @@ if burst_penalty <= Q_config:
 if burst_penalty > Q_config:
     Q_effective = 0
     usable_bdp = BDP * min(1, Q_config / burst_penalty)
-    cwnd = floor((usable_bdp - MSS) / MSS)
+    cwnd = floor((usable_bdp + Q_effective - MSS) / MSS)
 ```
-
 
 Below we will conduct more tests to see whether this equation truely works or not:
 
+## burst_penalty <= Q_config
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 200 --tbf-rate 200Mbit --tbf-burst 50000b  --tbf-limit 50000b --cwnd 12
+  - R_arrival: 1000Mbit
+  - R_tbf = 200Mbit
+  - RTT   = 0.4ms
+  - BDP   = 200Mbit * 0.4ms = 10000B
+  - burst_penalty = 10000 * (1000/200 - 1) = 40000B
+  - Q_effective = 50000 - 40000 = 10000B
+  - <ins>cwnd = (BDP + Q_effective - MSS) / MSS = (10000 + 10000 - 1460) / 1460 ~= 12.69 => 12 </ins>
+- client_server/DB/1GB/1GB_35170_12 (**45.11s**)
+![alt text](DB/1GB/1GB_35170_12/cwnd_192_168_88_253_35170.png)
 
-## BDP (25000 bytes) < queue_size (25000)
+Ok it seems like here 12 is not the optimal rate. 
+- DB/1GB/1GB_43370_15 (**45.05s**)
+- DB/1GB/1GB_44342_30 (**44.98s**)
+- DB/1GB/1GB_47504_32 (**44.96s**)
+- DB/1GB/1GB_34780_33 (**44.96s**)
+- DB/1GB/1GB_40442_35 (**44.99s**)
+- The optimal cwnd seems to be 32 ~ 33???
+
+```
+At lower TBF rates, elapsed time quickly reaches the TBF-limited throughput even with a smaller cwnd. Therefore, the empirical “optimal” depends on the objective. If we optimize only throughput, cwnd=15 already performs almost as well (1GiB * 8 / 200Mbit/s ~= 42.95s and its around 45s overall when cwnd >= 12). 
+
+If we optimize for the largest cwnd before repeated loss recovery, the safe upper region is around cwnd=30~32, with cwnd=33 already borderline.
+```
 
 
+- with TCP Reno Default we get:
+- client_server/DB/1GB/1GB_55714_0 (**44.95s**)
+![alt text](DB/1GB/1GB_55714_0/cwnd_192_168_88_253_55714.png)
+
+
+## burst_penalty > Q_config
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 200 --tbf-rate 200Mbit --tbf-burst 50000b  --tbf-limit 25000b --cwnd 3
+  - R_arrival: 1000Mbit
+  - R_tbf = 200Mbit
+  - RTT   = 0.4ms
+  - BDP   = 200Mbit * 0.4ms = 10000B
+  - burst_penalty = 10000 * (1000/200 - 1) = 40000B
+  - usable_bdp = 10000 * min(1, 25000 / 40000)
+  - <ins>cwnd = floor((usable_bdp + Q_effective - MSS) / MSS) = (6250 + 0 - 1460) / 1460 ~= 3.28 => 3 </ins>
+- client_server/DB/1GB/1GB_54264_3 (**45.14s**)
+![alt text](DB/1GB/1GB_54264_3/cwnd_192_168_88_253_54264.png)
+
+- with TCP Reno Default we get:
+- client_server/DB/1GB/1GB_35434_0 (**45.06**)
+![alt text](DB/1GB/1GB_35434_0/cwnd_192_168_88_253_35434.png)
