@@ -221,6 +221,7 @@ fi
 RUN_ID="$(date +%Y%m%d_%H%M%S)"
 TMP_DIR="$DB_DIR/.tmp_$RUN_ID"
 TMP_CONTEXT="$TMP_DIR/context.txt"
+TMP_R_ARRIVAL="$TMP_DIR/r_arrival.txt"
 TMP_SUMMARY="$TMP_DIR/transfer_summary.json"
 TMP_SERVER_LOG="$TMP_DIR/server.log"
 mkdir -p "$TMP_DIR"
@@ -285,13 +286,14 @@ else
 fi
 
 # log_extractor.py may need sudo for dmesg on systems with kernel.dmesg_restrict=1.
-# Refresh sudo now so its non-interactive sudo calls can work while the server runs.
-log "Refreshing sudo access for dmesg log extraction"
+# r_arrival_extractor.py may need sudo for bpftrace.
+# Refresh sudo now so non-interactive sudo calls can work while the server runs.
+log "Refreshing sudo access for background extractors"
 sudo -v
 
 # Build the server command as an array so paths and values with spaces stay safe.
 SERVER_CMD=(
-  python3 "$SERVER_PATH"
+  sudo -E python3 "$SERVER_PATH"
   --host "$SERVER_HOST"
   --port "$SERVER_PORT"
   --size "$DATA_SIZE_GIB"
@@ -299,6 +301,8 @@ SERVER_CMD=(
   --log-extractor
   --log-context-file "$TMP_CONTEXT"
   --log-interval "$LOG_INTERVAL"
+  --r-arrival-extractor
+  --r-arrival-output-file "$TMP_R_ARRIVAL"
   --summary-file "$TMP_SUMMARY"
 )
 
@@ -337,6 +341,11 @@ log "Creating output directory $OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 mv "$TMP_SUMMARY" "$OUTPUT_DIR/transfer_summary.json"
 mv "$TMP_SERVER_LOG" "$OUTPUT_DIR/server.log"
+if [[ -f "$TMP_R_ARRIVAL" ]]; then
+  mv "$TMP_R_ARRIVAL" "$OUTPUT_DIR/r_arrival.txt"
+else
+  : > "$OUTPUT_DIR/r_arrival.txt"
+fi
 
 if [[ "$CCA" == "my_cca" ]]; then
   if [[ -f "$TMP_CONTEXT" ]]; then

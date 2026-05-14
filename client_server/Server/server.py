@@ -22,6 +22,7 @@
 # - at the end, send a STOP COMMAND to the client and stop the log_extractor&cleaner
 
 import argparse
+import csv
 import json
 import os
 import socket
@@ -37,6 +38,12 @@ ONE_GIB = (1024 ** 3) * 1 # 1 GiB for better testing of congestion control; adju
 CHUNK_SIZE = 1024 * 1024  # 1 MiB
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_EXTRACTOR_PATH = os.path.join(SCRIPT_DIR, "server_sub_process_1", "log_extractor.py")
+R_ARRIVAL_EXTRACTOR_PATH = os.path.join(
+    SCRIPT_DIR, "server_sub_process_3", "r_arrival_extractor.py"
+)
+DEFAULT_R_ARRIVAL_FILE = os.path.join(
+    SCRIPT_DIR, "server_sub_process_3", "r_arrival.txt"
+)
 
 
 def send_from_file(conn, file_path, size):
@@ -81,6 +88,70 @@ def start_log_extractor(context_file, interval):
     return subprocess.Popen(command)
 
 
+def start_r_arrival_extractor(output_file, interval_ms):
+    command = [
+        sys.executable,
+        R_ARRIVAL_EXTRACTOR_PATH,
+        "--output-file",
+        output_file,
+        "--interval-ms",
+        str(interval_ms),
+    ]
+    return subprocess.Popen(command)
+
+
+def stop_process(process, process_name):
+    if process is None or process.poll() is not None:
+        return
+
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+
+    print(f"Stopped {process_name}")
+
+
+def summarize_r_arrival(output_file):
+    path = os.path.abspath(output_file)
+    if not os.path.exists(path):
+        return {
+            "average_r_arrival_mbit": None,
+            "max_r_arrival_mbit": None,
+            "r_arrival_sample_count": 0,
+        }
+
+    samples = []
+    with open(path, "r", encoding="utf-8", newline="") as arrival_file:
+        csv_lines = (
+            line for line in arrival_file if line.strip() and not line.startswith("#")
+        )
+        reader = csv.DictReader(csv_lines)
+        for row in reader:
+            value = row.get("r_arrival_mbit")
+            if not value:
+                continue
+            try:
+                samples.append(float(value))
+            except ValueError:
+                continue
+
+    if not samples:
+        return {
+            "average_r_arrival_mbit": None,
+            "max_r_arrival_mbit": None,
+            "r_arrival_sample_count": 0,
+        }
+
+    return {
+        "average_r_arrival_mbit": sum(samples) / len(samples),
+        "max_r_arrival_mbit": max(samples),
+        "r_arrival_sample_count": len(samples),
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="Send data to a single client.")
     parser.add_argument("--host", default="192.168.88.254", help="Bind host (default: 192.168.88.254)")
@@ -92,6 +163,9 @@ def main():
     parser.add_argument("--log-extractor", action="store_true", help="Run the kernel log extractor during the transfer")
     parser.add_argument("--log-context-file", default=os.path.join(SCRIPT_DIR, "server_sub_process_1", "context.txt"), help="Output file for extracted kernel logs")
     parser.add_argument("--log-interval", type=float, default=0.5, help="Seconds between log extractions (default: 0.5)")
+    parser.add_argument("--r-arrival-extractor", action="store_true", help="Run the TBF enqueue-rate extractor during the transfer")
+    parser.add_argument("--r-arrival-output-file", default=DEFAULT_R_ARRIVAL_FILE, help="Output file for R_arrival samples")
+    parser.add_argument("--r-arrival-interval-ms", type=int, default=1, help="Milliseconds between R_arrival samples (default: 1)")
     parser.add_argument("--summary-file", default=None, help="Write transfer summary JSON to this path")
     args = parser.parse_args()
 
@@ -110,11 +184,19 @@ def main():
 
 
     log_process = None
+    r_arrival_process = None
     try:
         # start the log_extractor && log_cleaner
         if args.log_extractor:
             log_process = start_log_extractor(args.log_context_file, args.log_interval)
             print(f"Started log extractor with PID {log_process.pid}")
+
+        if args.r_arrival_extractor:
+            r_arrival_process = start_r_arrival_extractor(
+                args.r_arrival_output_file,
+                args.r_arrival_interval_ms,
+            )
+            print(f"Started R_arrival extractor with PID {r_arrival_process.pid}")
         
         # open a socket and start listening
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -143,6 +225,16 @@ def main():
                 mbps = (total / (CHUNK_SIZE)) / elapsed if elapsed > 0 else 0
                 print(f"Sent {total} bytes in {elapsed:.2f}s ({mbps:.2f} MiB/s)")
 
+                r_arrival_summary = {
+                    "average_r_arrival_mbit": None,
+                    "max_r_arrival_mbit": None,
+                    "r_arrival_sample_count": 0,
+                }
+                if r_arrival_process is not None:
+                    stop_process(r_arrival_process, "R_arrival extractor")
+                    r_arrival_process = None
+                    r_arrival_summary = summarize_r_arrival(args.r_arrival_output_file)
+
                 # Summarize the session information as a JSON 
                 # run.sh will pass it to AnalysisPhase
                 if args.summary_file:
@@ -156,16 +248,17 @@ def main():
                         "server_port": args.port,
                         "size_gib": args.size,
                         "total_bytes": total,
+                        **r_arrival_summary,
                     }
                     os.makedirs(os.path.dirname(os.path.abspath(args.summary_file)), exist_ok=True)
                     with open(args.summary_file, "w", encoding="utf-8") as summary_file:
                         json.dump(summary, summary_file, indent=2)
                         summary_file.write("\n")
     finally:
+        if r_arrival_process is not None:
+            stop_process(r_arrival_process, "R_arrival extractor")
         if log_process is not None:
-            log_process.terminate()
-            log_process.wait()
-            print("Stopped log extractor")
+            stop_process(log_process, "log extractor")
 
 
 if __name__ == "__main__":
