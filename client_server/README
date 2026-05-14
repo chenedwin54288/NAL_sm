@@ -551,6 +551,9 @@ It seems like the optiaml cwnd for, **RTT: 0.4ms, BandWidth: 1Gbits, TokenGenera
 
 
 
+
+
+
 ## BDP (25000 bytes) < queue_size (50000)
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 50000b  --cwnd 50
 - client_server/DB/1GB/1GB_48896_50 (**18.23s**)
@@ -614,6 +617,95 @@ Using the optimal cwnd we get:
 
 
 Yes, even when the burst size is set to 50000 bytes, the "optimal window" size seems to be still optimal. Meaning that, the token generate rate indeed matters. But HOW DOES THIS EFFECT THE optimal cwnd equation?
+
+
+Here I let CODEX analysed the tested result above, and it gave me a reason: **"burst penality was not taken into account"**. Essentially, the current pipeline looks like this: TCP Application -> qdisc/TBF queue -> NIC driver -> physical link. And if the token-generation rate < packet arrival rate to the TBF queue, then logically thinking, the queue will be filled up. And the remaining queue size is the <ins>size that the CWND is still able to increase</ins>, we call this the **effective queue size**, which is the actual size that has to be taken into account when calculting the optimal window size.
+
+Based on this idea, we redefine the optial window equation as:
+```bash
+R_arrival = effective packet arrival/enqueue rate into TBF
+R_tbf  = token generation rate
+BDP = R_tbf * RTT_base
+
+# queue space consumed by the rate mismatch during one RTT
+# burst_penalty = (R_arrival - R_tbf) * RTT
+#               = R_arrival * RTT - R_tbf * RTT
+#               = R_tbf * RTT * (R_arrival/R_tbf - 1)
+#               = BDP * (R_arrival/R_tbf - 1)
+burst_penalty = BDP * (R_arrival / R_tbf - 1)
+Q_effective = max(0, Q_config - burst_penalty)
+optimal_cwnd = floor((BDP + Q_effective - MSS) / MSS)
+```
+
+Using this equation to explain the case above we then get:
+-  --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 50000b 
+  - R_arrival: 1000Mbit
+  - R_tbf = 500Mbit
+  - RTT   = 0.4ms
+  - BDP   = 500Mbit * 0.4ms = 25000B
+  - burst_penalty = 25000 * (1000/500 - 1) = 25000B
+  - Q_effective = 50000 - 25000 = 25000B
+  - <ins>cwnd = (BDP + Q_effective - MSS) / MSS = (25000 + 25000 - 1460) / 1460 ~= 33 </ins>
+
+- --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 25000b
+  - R_arrival: 1000Mbit
+  - R_tbf = 500Mbit
+  - RTT   = 0.4ms
+  - BDP   = 500Mbit * 0.4ms = 25000B
+  - burst_penalty = 25000 * (1000/500 - 1) = 25000B
+  - Q_effective = 25000 - 25000 = 0B
+  - <ins>cwnd = (BDP + Q_effective - MSS) / MSS = (25000 + 0 - 1460) / 1460 ~= 16 </ins>
+
+
+- --tbf-rate 500Mbit --tbf-burst 1Mb --tbf-limit 25000b
+  - R_arrival: 1000Mbit
+  - R_tbf = 500Mbit
+  - RTT   = 0.4ms
+  - BDP   = 500Mbit * 0.4ms = 25000B
+  - burst_penalty = 25000 * (1000/500 - 1) = 25000B
+  - Q_effective = 25000 - 25000 = 0B
+  - <ins>cwnd = (BDP + Q_effective - MSS) / MSS = (25000 + 0 - 1460) / 1460 ~= 16 </ins>
+  - As stated before "Note here, as it can be seen from the graph, for the first several ms, we were staying at tbe theoretical optimal window size 33". This was because the actual theoretical cwnd was 16, but due to the 1MB burst size, it was able to temporary reach 33 cwnd
+
+As it can be seen from the calculation above, when token-generation rate < R_arrival, the equation above always applies. When token-generation rate ~= R_arrival, the optimal cwnd equation will just be **BDP + queue - MSS**. This is the reason why when token generation rate was 1GB, we were able to find the optimal window size.
+
+
+Note that to get the R_arrival, we need to kinda track the enqueue rate (TCP application -> qdisc). However, it is also possible to reverse calculate this by using the emperical cwnd. That is:
+```bash 
+(burst_penalty + BDP) / RTT = R_arrival  
+burst_penalty = Q_config - Q_effective
+optimal_cwnd = floor((BDP + Q_effective - MSS) / MSS)
+
+
+# so when...
+optimal_cwnd = 16
+burst_penalty = 25000B
+BDP = 25000B
+RTT = 0.4ms
+R_arrival = (25000B + 25000B) * 8 / 0.0004 = 1Gbit 
+```
+
+But what happens when **burst_penality > Q_effective**? In this case, <ins> the queue is so small that the sender cannot safely keep a full BDP in flight, because the TBF cannot absorb the burst mismatch.</ins> 
+
+For instance when you have --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250, the burst penality is 25000B, but you only have 6250 bytes for the TBF queue, and it is not enough to contain the incoming accumulating packets due to the RTT. Most of the packets will be DROPPED, and the useful BDP will decrease, as we cannot fully utilize the link_bandwidth
+
+This explains the case 
+
+In conclusion:
+```
+if burst_penalty <= Q_config:
+    Q_effective = Q_config - burst_penalty
+    cwnd = floor((BDP + Q_effective - MSS) / MSS)
+
+if burst_penalty > Q_config:
+    Q_effective = 0
+    usable_bdp = BDP * min(1, Q_config / burst_penalty)
+    cwnd = floor((usable_bdp - MSS) / MSS)
+```
+
+
+Below we will conduct more tests to see whether this equation truely works or not:
+
 
 ## BDP (25000 bytes) < queue_size (25000)
 
