@@ -1,544 +1,429 @@
-## BDP (25000 bytes) < queue_size (50000)
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 50000b  --cwnd 50
-- client_server/DB/1GB/1GB_48896_50 (**18.23s**)
-- Comparison:
-  - theoretical: (25000 + 50000 - 1460) / 1460 ~= 50
-  - emperical: 33 ~ 34
-![alt text](DB/1GB/1GB_48896_50/cwnd_192_168_88_253_48896.png)
+# Optimal CWND Experiments
 
+## Goal
 
+These experiments try to find a CWND cap for `my_cca` that keeps a TCP sender close to the TBF bottleneck rate while avoiding repeated TBF queue overflow and loss recovery.
 
-## BDP (25000 bytes) == queue_size (25000)
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 25000b  --cwnd 33
-- client_server/DB/1GB/1GB_44934_33 (**18.27s**)
-- Comparison:
-  - theoretical: (25000 + 25000 - 1460) / 1460 ~= 33
-  - emperical: 16 ~ 17.5
-![alt text](DB/1GB/1GB_44934_33/cwnd_192_168_88_253_44934.png)
+The key path being studied is:
 
+```text
+TCP application -> qdisc / TBF queue -> NIC driver -> physical link
+```
 
-When we did with {rtt-ms: 0.4}, {TBF Rate: 1Gb}, {TBF Burst: 1Mb}, {TBF limit: 50000}, {MSS: 1460}, the optimal window size worked. changing the burst size to see what happens here we make it from 50,000b => 1Mb (1,000,000b) so 20 times more
+The main lesson from the experiments is that the original `BDP + queue` CWND estimate only works when the packet arrival rate into the TBF is close to the TBF token-generation rate. When the application enqueues into TBF faster than the bucket drains, part of the configured queue is already consumed by that mismatch. That consumed part should be treated as a burst penalty.
 
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 1Mb  --tbf-limit 25000b  --cwnd 33
--  client_server/DB/1GB/1GB_41714_33 (**17.94s**)
-- Comparison:
-  - theoretical: (25000 + 25000 - 1460) / 1460 ~= 33
-  - emperical: 20
-- Note here, as it can be seen from the graph, for the first several ms, we were staying at tbe theoretical optimal window size 33
-![alt text](DB/1GB/1GB_41714_33/cwnd_192_168_88_253_41714.png)
+## Constants
 
+| Item | Value |
+| --- | --- |
+| Transfer size | 1 GiB |
+| Base RTT | 0.4 ms |
+| MSS | 1460 B |
+| Default TBF burst | 50000 B, except the explicit 1 MB burst check |
+| Main CCA under test | `my_cca` |
+| Baseline CCA | uncapped Reno behavior through `my_cca --cwnd 0` |
 
-Maybe the token generation rate also matters? Running another test with the initial setup: **{rtt-ms: 0.4}, {TBF Rate: 1Gb}, {TBF Burst: 1Mb}, {TBF limit: 50000}, {MSS: 1460}** again.
+`R_arrival` in this note means a short-window enqueue-rate estimate into TBF. It is not the same as the whole-transfer `average_r_arrival_mbit` in `transfer_summary.json`, because the whole-transfer average tends to collapse toward the bottleneck rate.
 
-Using the normal TCP Reno we get:
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 1Mb  --tbf-limit 50000b  --cwnd 0
-- client_server/DB/1GB/1GB_47786_0 (**9.69s**)
-![alt text](DB/1GB/1GB_47786_0/cwnd_192_168_88_253_47786.png)
+## Model
 
-Using the optimal cwnd we get:
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 1Mb  --tbf-limit 50000b  --cwnd 67
-- Comparison:
-  - theoretical: (50000 + 50000 - 1460) / 1460 ~= 67
-  - emperical: 66~67
-- client_server/DB/1GB/1GB_50912_67 (**9.27s**)
-![alt text](DB/1GB/1GB_50912_67/cwnd_192_168_88_253_50912.png)
+The original model was:
 
-It seems like the optimal cwnd is "more optimal" under the case that token-generation rate is 1Gbit. We also want to check whether changing the burstSize back to 50000b will cause any difference.
+```text
+BDP = R_tbf * RTT_base
+optimal_cwnd = floor((BDP + Q_config - MSS) / MSS)
+```
 
-Using the normal TCP Reno we get:
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b  --tbf-limit 50000b  --cwnd 0
-- client_server/DB/1GB/1GB_38042_0 (**9.30s**)
-![alt text](DB/1GB/1GB_38042_0/cwnd_192_168_88_253_38042.png)
+That failed whenever `R_arrival > R_tbf`. The revised model is:
 
-
-Using the optimal cwnd we get:
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b  --tbf-limit 50000b  --cwnd 67
-- Comparison:
-  - theoretical: (50000 + 50000 - 1460) / 1460 ~= 67
-  - emperical: 64~67???
-- client_server/DB/1GB/1GB_42250_67 (**9.40s**)
-![alt text](DB/1GB/1GB_42250_67/cwnd_192_168_88_253_42250.png)
-
-
-Yes, even when the burst size is set to 50000 bytes, the "optimal window" size seems to be still optimal. Meaning that, the token generate rate indeed matters. But HOW DOES THIS EFFECT THE optimal cwnd equation?
-
-
-Here I let CODEX analysed the tested result above, and it gave me a reason: **"burst penality was not taken into account"**. Essentially, the current pipeline looks like this: TCP Application -> qdisc/TBF queue -> NIC driver -> physical link. And if the token-generation rate < packet arrival rate to the TBF queue, then logically thinking, the queue will be filled up. And the remaining queue size is the <ins>size that the CWND is still able to increase</ins>, we call this the **effective queue size**, which is the actual size that has to be taken into account when calculting the optimal window size.
-
-Based on this idea, we redefine the optial window equation as:
-```bash
-R_arrival = effective packet arrival/enqueue rate into TBF
-R_tbf  = token generation rate
+```text
 BDP = R_tbf * RTT_base
 
-# queue space consumed by the rate mismatch during one RTT
-# burst_penalty = (R_arrival - R_tbf) * RTT
-#               = R_arrival * RTT - R_tbf * RTT
-#               = R_tbf * RTT * (R_arrival/R_tbf - 1)
-#               = BDP * (R_arrival/R_tbf - 1)
-burst_penalty = BDP * (R_arrival / R_tbf - 1)
-Q_effective = max(0, Q_config - burst_penalty)
-optimal_cwnd = floor((BDP + Q_effective - MSS) / MSS)
-```
+Q_tbf = burst_penalty
+      = max(0, (R_arrival - R_tbf) * RTT_base)
+      = BDP * max(0, R_arrival / R_tbf - 1)
 
-Using this equation to explain the case above we then get:
--  --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 50000b 
-  - R_arrival: 1000Mbit
-  - R_tbf = 500Mbit
-  - RTT   = 0.4ms
-  - BDP   = 500Mbit * 0.4ms = 25000B
-  - burst_penalty = 25000 * (1000/500 - 1) = 25000B
-  - Q_effective = 50000 - 25000 = 25000B
-  - <ins>cwnd = (BDP + Q_effective - MSS) / MSS = (25000 + 25000 - 1460) / 1460 ~= 33 </ins>
-
-- --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 25000b
-  - R_arrival: 1000Mbit
-  - R_tbf = 500Mbit
-  - RTT   = 0.4ms
-  - BDP   = 500Mbit * 0.4ms = 25000B
-  - burst_penalty = 25000 * (1000/500 - 1) = 25000B
-  - Q_effective = 25000 - 25000 = 0B
-  - <ins>cwnd = (BDP + Q_effective - MSS) / MSS = (25000 + 0 - 1460) / 1460 ~= 16 </ins>
-
-
-- --tbf-rate 500Mbit --tbf-burst 1Mb --tbf-limit 25000b
-  - R_arrival: 1000Mbit
-  - R_tbf = 500Mbit
-  - RTT   = 0.4ms
-  - BDP   = 500Mbit * 0.4ms = 25000B
-  - burst_penalty = 25000 * (1000/500 - 1) = 25000B
-  - Q_effective = 25000 - 25000 = 0B
-  - <ins>cwnd = (BDP + Q_effective - MSS) / MSS = (25000 + 0 - 1460) / 1460 ~= 16 </ins>
-  - As stated before "Note here, as it can be seen from the graph, for the first several ms, we were staying at tbe theoretical optimal window size 33". This was because the actual theoretical cwnd was 16, but due to the 1MB burst size, it was able to temporary reach 33 cwnd
-
-As it can be seen from the calculation above, when token-generation rate < R_arrival, the equation above always applies. When token-generation rate ~= R_arrival, the optimal cwnd equation will just be **BDP + queue - MSS**. This is the reason why when token generation rate was 1GB, we were able to find the optimal window size.
-
-
-Note that to get the R_arrival, we need to kinda track the enqueue rate (TCP application -> qdisc). However, it is also possible to reverse calculate this by using the emperical cwnd. That is:
-```bash 
-(burst_penalty + BDP) / RTT = R_arrival  
-burst_penalty = Q_config - Q_effective
-optimal_cwnd = floor((BDP + Q_effective - MSS) / MSS)
-
-
-# so when...
-optimal_cwnd = 16
-burst_penalty = 25000B
-BDP = 25000B
-RTT = 0.4ms
-R_arrival = (25000B + 25000B) * 8 / 0.0004 = 1Gbit 
-```
-
-But what happens when **burst_penality > Q_effective**? In this case, <ins> the queue is so small that the sender cannot safely keep a full BDP in flight, because the TBF cannot absorb the burst mismatch.</ins> 
-
-For instance when you have --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250, the burst penality is 25000B, but you only have 6250 bytes for the TBF queue, and it is not enough to contain the incoming accumulating packets due to the RTT. Most of the packets will overflow, and the sender cannot safely keep `BDP` bytes in flight. The optimal cwnd must be smaller than the BDP-based value, because part of the sending window must be sacrificed to avoid TBF drops caused by bursty enqueue behavior.
-
-This explains the case 
-
-In conclusion:
-```
-burst_penality = (R_arrival - R_tbf) * RTT
-
-if burst_penalty <= Q_config:
-    Q_effective = Q_config - burst_penalty
+if Q_tbf <= Q_config:
+    Q_effective = Q_config - Q_tbf
     cwnd = floor((BDP + Q_effective - MSS) / MSS)
 
-if burst_penalty > Q_config:
+if Q_tbf > Q_config:
     Q_effective = 0
-    usable_bdp = BDP * min(1, Q_config / burst_penalty)
-    cwnd = floor((usable_bdp + Q_effective - MSS) / MSS)
+    usable_bdp = BDP * min(1, Q_config / Q_tbf)
+    cwnd = floor((usable_bdp - MSS) / MSS)
 ```
 
-Below we will conduct more tests to see whether this equation truely works or not:
-### Test 0
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 200 --tbf-rate 200Mbit --tbf-burst 50000b  --tbf-limit 25000b --cwnd 3
-  - R_arrival: 1000Mbit
-  - R_tbf = 200Mbit
-  - RTT   = 0.4ms
-  - BDP   = 200Mbit * 0.4ms = 10000B
-  - burst_penalty = 10000 * (1000/200 - 1) = 40000B
-  - usable_bdp = 10000 * min(1, 25000 / 40000)
-  - <ins>cwnd = floor((usable_bdp + Q_effective - MSS) / MSS) = (6250 + 0 - 1460) / 1460 ~= 3.28 => 3 </ins>
-- client_server/DB/1GB/1GB_54264_3 (**45.14s**)
-![alt text](DB/1GB/1GB_54264_3/cwnd_192_168_88_253_54264.png)
+In the final table, `Q_tbf` is this burst penalty: the amount of TBF queue consumed during one RTT by the enqueue/drain-rate mismatch.
 
-- with TCP Reno Default we get:
-- client_server/DB/1GB/1GB_35434_0 (**45.06**)
-![alt text](DB/1GB/1GB_35434_0/cwnd_192_168_88_253_35434.png)
+## Experiment Flow
 
-<ins>I feel like other than the case where Token-Gen-Rate == 1000Mbit and Token-Gen-Rate == 500Mbit, the equation proposed above to calculate the optimal cwnd does not really work.</ins> 
+1. Start with the simple BDP-plus-queue formula.
+2. Observe that it overestimates CWND when `R_tbf` is 500 Mbit/s but the sender can enqueue closer to 1 Gbit/s.
+3. Add `Q_tbf` / burst penalty to account for rate mismatch.
+4. Use empirical CWND regions to reverse-estimate `R_arrival`.
+5. Validate the revised formula across TBF rates of 750, 500, 250, and 200 Mbit/s with several queue sizes.
 
+## Phase 1: Why BDP + Queue Was Not Enough
 
-### Test 1
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 200 --tbf-rate 200Mbit --tbf-burst 50000b  --tbf-limit 50000b --cwnd 12
-  - R_arrival: 1000Mbit
-  - R_tbf = 200Mbit
-  - RTT   = 0.4ms
-  - BDP   = 200Mbit * 0.4ms = 10000B
-  - burst_penalty = 10000 * (1000/200 - 1) = 40000B
-  - Q_effective = 50000 - 40000 = 10000B
-  - <ins>cwnd = (BDP + Q_effective - MSS) / MSS = (10000 + 10000 - 1460) / 1460 ~= 12.69 => 12 </ins>
-- client_server/DB/1GB/1GB_35170_12 (**45.11s**)
-![alt text](DB/1GB/1GB_35170_12/cwnd_192_168_88_253_35170.png)
+### 500 Mbit/s, 50000 B Queue
 
-Ok it seems like here 12 is not the optimal rate. 
-- DB/1GB/1GB_43370_15 (**45.05s**)
-- DB/1GB/1GB_44342_30 (**44.98s**)
-- DB/1GB/1GB_47504_32 (**44.96s**)
-- DB/1GB/1GB_34780_33 (**44.96s**)
-- DB/1GB/1GB_40442_35 (**44.99s**)
-- The optimal cwnd seems to be 32 ~ 33???
+Command:
 
-```
-At lower TBF rates, elapsed time quickly reaches the TBF-limited throughput even with a smaller cwnd. Therefore, the empirical “optimal” depends on the objective. If we optimize only throughput, cwnd=15 already performs almost as well (1GiB * 8 / 200Mbit/s ~= 42.95s and its around 45s overall when cwnd >= 12). 
-
-If we optimize for the largest cwnd before repeated loss recovery, the safe upper region is around cwnd=30~32, with cwnd=33 already borderline.
+```bash
+./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 50
 ```
 
-- with TCP Reno Default we get:
-- client_server/DB/1GB/1GB_55714_0 (**44.95s**)
-![alt text](DB/1GB/1GB_55714_0/cwnd_192_168_88_253_55714.png)
-
-### Test 2 (750Mbit, 50000b queue)
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b  --tbf-limit 50000b --cwnd 57
-  - R_arrival: 1000Mbit
-  - R_tbf = 750Mbit
-  - RTT   = 0.4ms
-  - BDP   = 750Mbit * 0.4ms = 37500B
-  - burst_penalty = 37500 * (1000/750 - 1) = 12500B
-  - Q_effective = 50000 - 12500 = 47500B
-  - <ins>cwnd = (BDP + Q_effective - MSS) / MSS = (37500 + 47500 - 1460) / 1460 ~= 57.22 => 57 </ins>
-- client_server/DB/1GB/1GB_41662_57 (**12.07s**)
-![alt text](DB/1GB/1GB_41662_57/cwnd_192_168_88_253_41662.png)
-
-
-It seems like the optimal cwnd is around 36~43
-- client_server/DB/1GB/1GB_47470_36 (**12.02**)
-![alt text](DB/1GB/1GB_47470_36/cwnd_192_168_88_253_47470.png)
-- client_server/DB/1GB/1GB_49228_37 (**12.07**)
-![alt text](DB/1GB/1GB_49228_37/cwnd_192_168_88_253_49228.png)
-- client_server/DB/1GB/1GB_39108_38 (**12.03**)
-![alt text](DB/1GB/1GB_39108_38/cwnd_192_168_88_253_39108.png)
-- client_server/DB/1GB/1GB_49024_39 (**12.07**)
-![alt text](DB/1GB/1GB_49024_39/cwnd_192_168_88_253_49024.png)
-- client_server/DB/1GB/1GB_55568_40 (**12.04**)
-![alt text](DB/1GB/1GB_55568_40/cwnd_192_168_88_253_55568.png)
-- DB/1GB/1GB_34342_42 (**12.18**)
-![alt text](DB/1GB/1GB_34342_42/cwnd_192_168_88_253_34342.png)
-
-Using this to reverse calculate the R_arrival, we then get:
-- optimal cwnd if == 36 
-  - Q_effective = 36 * 1460 + 1460 - 37500 = 16520
-  - burst_penalty = 50000 - 16520 = 33480
-  - R_arrival = (33480 / 37500 + 1) * 750 = 1419.6 Mbit
-
-- optimal cwnd if == 38 
-  - Q_effective = 38 * 1460 + 1460 - 37500 = 19440
-  - burst_penalty = 50000 - 19440 = 30560
-  - R_arrival = (30560 / 37500 + 1) * 750 = 1361.2 Mbit
-
-- optimal cwnd if == 40
-  - Q_effective = 40 * 1460 + 1460 - 37500 = 22360
-  - burst_penalty = 50000 - 22360 = 27640
-  - R_arrival = (27640 / 37500 + 1) * 750 = 1302.4 Mbit
-
-- optimal cwnd if == 42 
-  - Q_effective = 42 * 1460 + 1460 - 37500 = 25280
-  - burst_penalty = 50000 - 25280 = 24720
-  - R_arrival = (24270 / 37500 + 1) * 750 = 1235.4 Mbit
-
-I SUSPECT WE NEED TO MONITOR THE R_ARRIVAL IN REAL TIME IN ORDER TO CALCULATE THE OPTIAML CWND. Shouldn't keep using the assumption that R_arrival = 1Gbits/s. 
-After adding r_arrival_extractor.py, we realized that this assumption was indeed correct. The r_arrival rate is not always the same. To solve this issue, I added a PACING RATE to the server.py, so TCP socket does not transfer packets faster than the pace to the qdisc.
-
-
-### Test 3 (using the reverse calculated R_arrival rate to test 750Mbit, 25000b queue)
-- with TCP Reno Default we get:
-- client_server/DB/1GB/1GB_47064_0 (**12.16**)
-![alt text](DB/1GB/1GB_47064_0/cwnd_192_168_88_253_47064.png)
-
-
-#### R_arrival = 1420 Mbit (THIS IS THE OPTIMAL)
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b  --tbf-limit 25000b --cwnd 18
-  - R_arrival: 1420Mbit
-  - R_tbf = 750Mbit
-  - RTT   = 0.4ms
-  - BDP   = 750Mbit * 0.4ms = 37500B
-  - burst_penalty = 37500 * (1420/750 - 1) = 33500
-  - Q_effective = 0
-  - usable_bdp = 37500 * min(1, 25000 / 33500) = 27985
-  - <ins>cwnd = (usable_bdp + Q_effective - MSS) / MSS = (27985 + 0 - 1460) / 1460 ~= 18.16 => 18 </ins>
-- client_server/DB/1GB/1GB_55592_18 (**12.02**)
-![alt text](DB/1GB/1GB_55592_18/cwnd_192_168_88_253_55592.png)
-
-
-#### R_arrival = 1361 Mbit 
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b  --tbf-limit 25000b --cwnd 20
-  - R_arrival: 1361Mbit
-  - R_tbf = 750Mbit
-  - RTT   = 0.4ms
-  - BDP   = 750Mbit * 0.4ms = 37500B
-  - burst_penalty = 37500 * (1361/750 - 1) = 30550B
-  - Q_effective = 0
-  - usable_bdp = 37500 * min(1, 25000 / 30550) = 30687
-  - <ins>cwnd = (usable_bdp + Q_effective - MSS) / MSS = (30687 + 0 - 1460) / 1460 ~= 22.01 => 20 </ins>
-- client_server/DB/1GB/1GB_42404_20 (**12.06**)
-![alt text](DB/1GB/1GB_42404_20/cwnd_192_168_88_253_42404.png)
-
-
-#### R_arrival = 1302 Mbit 
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b  --tbf-limit 25000b --cwnd 22
-  - R_arrival: 1302Mbit
-  - R_tbf = 750Mbit
-  - RTT   = 0.4ms
-  - BDP   = 750Mbit * 0.4ms = 37500B
-  - burst_penalty = 37500 * (1302/750 - 1) = 27600B
-  - Q_effective = 0
-  - usable_bdp = 37500 * min(1, 25000 / 27600) = 33967
-  - <ins>cwnd = (usable_bdp + Q_effective - MSS) / MSS = (33967 + 0 - 1460) / 1460 ~= 22.26 => 22 </ins>
-- client_server/DB/1GB/1GB_55324_22 (**12.12**)
-![alt text](DB/1GB/1GB_55324_22/cwnd_192_168_88_253_55324.png)
-
-#### R_arrival = 1235 Mbit
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b  --tbf-limit 25000b --cwnd 25
-  - R_arrival: 1235Mbit
-  - R_tbf = 750Mbit
-  - RTT   = 0.4ms
-  - BDP   = 750Mbit * 0.4ms = 37500B
-  - burst_penalty = 37500 * (1235/750 - 1) = 24250B
-  - Q_effective = 25000 - 24250 = 750B
-  - <ins>cwnd = (BDP + Q_effective - MSS) / MSS = (37500 + 750 - 1460) / 1460 ~= 25.19 => 25 </ins>
-- client_server/DB/1GB/1GB_32982_25 (**12.13**)
-![alt text](DB/1GB/1GB_32982_25/cwnd_192_168_88_253_32982.png)
-
-
-Seems like the theoretical optimal cwnd is 18 when **R_arrival = 1420 Mbit**. 
-Using this t
-
-
-### Test 4 (using the reverse calculated R_arrival rate to test 750Mbit, 12500b queue)
-- with TCP Reno Default we get:
-- client_server/DB/1GB/1GB_38038_0 (**14.56**)
-![alt text](DB/1GB/1GB_38038_0/cwnd_192_168_88_253_38038.png)
-
-
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b  --tbf-limit 12500b --cwnd 12
-  - R_arrival: 1420Mbit
-  - R_tbf = 750Mbit
-  - RTT   = 0.4ms
-  - BDP   = 750Mbit * 0.4ms = 37500B
-  - burst_penalty = 37500 * (1420/750 - 1) = 24250B
-  - Q_effective = 0
-  - usable_bdp = 37500 * min(1, 12500 / 24250) = 19330
-  - <ins>cwnd = (usable_bdp + Q_effective - MSS) / MSS = (19330 + 0 - 1460) / 1460 ~= 12.24 => 12 </ins>
-- client_server/DB/1GB/1GB_33854_12 (**12.05**)
-![alt text](DB/1GB/1GB_33854_12/cwnd_192_168_88_253_33854.png)
-
-This seems optimal.
-
-
-### Test 4 (using the reverse calculated R_arrival rate to test 750Mbit, 6250b queue)
-- with TCP Reno Default we get:
-- client_server/DB/1GB/1GB_44108_0 (**64.73**)
-![alt text](DB/1GB/1GB_44108_0/cwnd_192_168_88_253_44108.png)
-
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b  --tbf-limit 6250b --cwnd 5
-  - R_arrival: 1420Mbit
-  - R_tbf = 750Mbit
-  - RTT   = 0.4ms
-  - BDP   = 750Mbit * 0.4ms = 37500B
-  - burst_penalty = 37500 * (1420/750 - 1) = 24250B
-  - Q_effective = 0
-  - usable_bdp = 37500 * min(1, 6250 / 24250) = 9665
-  - <ins>cwnd = (usable_bdp + Q_effective - MSS) / MSS = (9665 + 0 - 1460) / 1460 ~= 5.62 => 5 </ins>
-- client_server/DB/1GB/1GB_60834_5 (**21.78**)
-![alt text](DB/1GB/1GB_60834_5/cwnd_192_168_88_253_60834.png) 
-
-This seems optimal.
-
-
-### Test 5 (500Mbit, 50000b queue)
-- with TCP Reno Default we get:
-- client_server/DB/1GB/1GB_36664_0 (**18.02**)
-![alt text](DB/1GB/1GB_36664_0/cwnd_192_168_88_253_36664.png)
-
-
-Finding the R_arrival:
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 50000b --cwnd 33
-  - R_arrival: 1000Mbit
-  - R_tbf = 500Mbit
-  - RTT   = 0.4ms
-  - BDP   = 500Mbit * 0.4ms = 25000
-  - burst_penalty = 25000 * (1000/500 - 1) = 25000
-  - Q_effective = 50000 - 25000 = 25000 
-  - <ins>cwnd = (BDP + Q_effective - MSS) / MSS = (25000 + 25000 - 1460) / 1460 ~= 33.25 => 33 </ins>
-- client_server/DB/1GB/1GB_49068_33 (**18.04**)
-![alt text](DB/1GB/1GB_49068_33/cwnd_192_168_88_253_49068.png) 
-
-
-For 500Mbit token gneration rate, R_arrival: 1000Mbit seems correct.
-
-
-### Test 6 (500Mbit, 25000b queue)
-- with TCP Reno Default we get:
-- client_server/DB/1GB/1GB_37850_0 (**18.06**)
-![alt text](DB/1GB/1GB_37850_0/cwnd_192_168_88_253_37850.png) 
-
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 25000b --cwnd 16
-  - R_arrival: 1000Mbit
-  - R_tbf = 500Mbit
-  - RTT   = 0.4ms
-  - BDP   = 500Mbit * 0.4ms = 25000
-  - burst_penalty = 25000 * (1000/500 - 1) = 25000
-  - Q_effective = 25000 - 25000 = 0 
-  - <ins>cwnd = (BDP + Q_effective - MSS) / MSS = (25000 + 0 - 1460) / 1460 ~= 16.12 => 16 </ins>
-- client_server/DB/1GB/1GB_52256_16 (**18.05**)
-![alt text](DB/1GB/1GB_52256_16/cwnd_192_168_88_253_52256.png)
-
-
-### Test 7 (500Mbit, 12500b queue)
-- with TCP Reno Default we get:
-- DB/1GB/1GB_48698_0 (**18.68**)
-![alt text](DB/1GB/1GB_48698_0/cwnd_192_168_88_253_48698.png)
-
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 12500b --cwnd 7
-  - R_arrival: 1000Mbit
-  - R_tbf = 500Mbit
-  - RTT   = 0.4ms
-  - BDP   = 500Mbit * 0.4ms = 25000
-  - burst_penalty = 25000 * (1000/500 - 1) = 25000
-  - Q_effective = 0
-  - usable_bdp = 25000 * min(1, 12500 / 25000) = 12500
-  - <ins>cwnd = (usable_bdp + Q_effective - MSS) / MSS = (12500 + 0 - 1460) / 1460 ~= 7.56 => 7 </ins>
-- client_server/DB/1GB/1GB_60200_7 (**18.08**)
-![alt text](DB/1GB/1GB_60200_7/cwnd_192_168_88_253_60200.png)
-
-
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 12500b --cwnd 8
-- client_server/DB/1GB/1GB_38296_8 (**18.13**)
-![alt text](DB/1GB/1GB_38296_8/cwnd_192_168_88_253_38296.png)
-
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 12500b --cwnd 9
-- client_server/DB/1GB/1GB_43544_9 (**18.04**)
-![alt text](DB/1GB/1GB_43544_9/cwnd_192_168_88_253_43544.png)
-
-
-### Test 8 (500Mbit, 6250b queue)
-- with TCP Reno Default we get:
-- client_server/DB/1GB/1GB_52064_0 (**44.57**)
-![alt text](DB/1GB/1GB_52064_0/cwnd_192_168_88_253_52064.png)
-
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250b --cwnd 3
-  - R_arrival: 1000Mbit
-  - R_tbf = 500Mbit
-  - RTT   = 0.4ms
-  - BDP   = 500Mbit * 0.4ms = 25000
-  - burst_penalty = 25000 * (1000/500 - 1) = 25000
-  - Q_effective = 0
-  - usable_bdp = 25000 * min(1, 6250 / 25000) = 6250
-  - <ins>cwnd = (usable_bdp + Q_effective - MSS) / MSS = (6250 + 0 - 1460) / 1460 ~= 3.28 => 3 </ins>
-- client_server/DB/1GB/1GB_34330_3 (**39.57**)
-![alt text](DB/1GB/1GB_34330_3/cwnd_192_168_88_253_34330.png)
-
-
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250b --cwnd 4
-- client_server/DB/1GB/1GB_54646_4 (**22.97**)
-![alt text](DB/1GB/1GB_54646_4/cwnd_192_168_88_253_54646.png)
-
-
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b  --tbf-limit 6250b --cwnd 7
-- client_server/DB/1GB/1GB_44654_7 (**18.29**)... optimal
-![alt text](DB/1GB/1GB_44654_7/cwnd_192_168_88_253_44654.png)
-
-
-
-### Test 9 (250Mbit, 50000b queue)
-- with TCP Reno Default we get:
-- client_server/DB/1GB/1GB_51330_0 (**36.02**)
-![alt text](DB/1GB/1GB_51330_0/cwnd_192_168_88_253_51330.png)
-
-From the tcp diagram, it seems like the optimal cwnd is between 30~35. We will use these to find the approximate R_arrival.
-- client_server/DB/1GB/1GB_57344_33 (**36**) <= optimal
-![alt text](DB/1GB/1GB_57344_33/cwnd_192_168_88_253_57344.png)
-- client_server/DB/1GB/1GB_43728_32 
-
-The optimal cwnd was 33. Using this to calculate the R_arrival:
-- optimal cwnd if == 33
-  - Q_effective = 33 * 1460 + 1460 - 12500 = 37140
-  - burst_penalty = 50000 - 37140 = 12860
-  - R_arrival = (12860 / 12500 + 1) * 250 = 507.2 Mbit
-
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b  --tbf-limit 50000b --cwnd 33
-  - R_arrival: 507Mbit
-  - R_tbf = 250Mbit
-  - RTT   = 0.4ms
-  - BDP   = 250Mbit * 0.4ms = 12500
-  - burst_penalty = 12500 * (507/250 - 1) = 12850
-  - Q_effective = 50000 - 12850 = 37150 
-  - <ins>cwnd = (BDP + Q_effective - MSS) / MSS = (12500 + 37150 - 1460) / 1460 ~= 33.01 => 33 </ins> 
-- client_server/DB/1GB/1GB_37848_33 (**36**)
-![alt text](DB/1GB/1GB_37848_33/cwnd_192_168_88_253_37848.png)
-
-### Test 10 (250Mbit, 25000b queue)
-- with TCP Reno Default we get:
-- client_server/DB/1GB/1GB_42518_0 (**36.07**)
-![alt text](DB/1GB/1GB_42518_0/cwnd_192_168_88_253_42518.png)
-
-
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b  --tbf-limit 25000b --cwnd 16
-  - R_arrival: 507Mbit
-  - R_tbf = 250Mbit
-  - RTT   = 0.4ms
-  - BDP   = 250Mbit * 0.4ms = 12500
-  - burst_penalty = 12500 * (507/250 - 1) = 12850
-  - Q_effective = 25000 - 12850 = 12150 
-  - <ins>cwnd = (BDP + Q_effective - MSS) / MSS = (12500 + 12150 - 1460) / 1460 ~= 15.88 => 16 </ins> 
-- client_server/DB/1GB/1GB_33412_16 (**36.01**)
-![alt text](DB/1GB/1GB_33412_16/cwnd_192_168_88_253_33412.png)
-
-### Test 11 (250Mbit, 12500b queue)
-- with TCP Reno Default we get:
-- client_server/DB/1GB/1GB_51184_0 (**36.03**)
-![alt text](DB/1GB/1GB_51184_0/cwnd_192_168_88_253_51184.png)
-
-
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b  --tbf-limit 12500b --cwnd 7 
-  - R_arrival: 507Mbit
-  - R_tbf = 250Mbit
-  - RTT   = 0.4ms
-  - BDP   = 250Mbit * 0.4ms = 12500
-  - burst_penalty = 12500 * (507/250 - 1) = 12850
-  - Q_effective = 0
-  - usable_bdp = 12500 * min(1, 12500 / 12850) = 12160
-  - <ins>cwnd = (usable_bdp + Q_effective - MSS) / MSS = (12160 + 0 - 1460) / 1460 ~= 7.33 => 7 </ins>
-- client_server/DB/1GB/1GB_42770_7 (**36.08**) ... optimal
-![alt text](DB/1GB/1GB_42770_7/cwnd_192_168_88_253_42770.png)
-
-- DB/1GB/1GB_45006_8 (**35.96**)
-- DB/1GB/1GB_51208_9 (**36.03**)
-
-### Test 12 (250Mbit, 6250b queue)
-- with TCP Reno Default we get:
-- client_server/DB/1GB/1GB_50774_0 (**37.68**)
-![alt text](DB/1GB/1GB_50774_0/cwnd_192_168_88_253_50774.png)
-
-
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b  --tbf-limit 6250b --cwnd 3 
-  - R_arrival: 507Mbit
-  - R_tbf = 250Mbit
-  - RTT   = 0.4ms
-  - BDP   = 250Mbit * 0.4ms = 12500
-  - burst_penalty = 12500 * (507/250 - 1) = 12850
-  - Q_effective = 0
-  - usable_bdp = 12500 * min(1, 6250 / 12850) = 6080
-  - <ins>cwnd = (usable_bdp + Q_effective - MSS) / MSS = (6080 + 0 - 1460) / 1460 ~= 3.16 => 3 </ins>
-- client_server/DB/1GB/1GB_49192_3 (**39.34**)
-![alt text](DB/1GB/1GB_49192_3/cwnd_192_168_88_253_49192.png)
-
-
-- client_server/DB/1GB/1GB_36250_5 (**36.29**) ... optimal
-![alt text](DB/1GB/1GB_36250_5/cwnd_192_168_88_253_36250.png)
-- DB/1GB/1GB_33640_6
+Result:
 
+| Run | Elapsed | Finding |
+| --- | ---: | --- |
+| `DB/1GB/1GB_48896_50` | 18.23 s | Simple formula predicted CWND 50, but empirical optimum was closer to 33-34. |
 
+Plot:
 
+![cwnd plot](DB/1GB/1GB_48896_50/cwnd_192_168_88_253_48896.png)
 
+Interpretation: with a 500 Mbit/s TBF and roughly 1 Gbit/s arrival into TBF, about 25000 B of the configured 50000 B queue is consumed by the rate mismatch during one RTT. The effective queue is therefore closer to 25000 B, making CWND around 33.
+
+### 500 Mbit/s, 25000 B Queue
+
+Command:
+
+```bash
+./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 33
+```
+
+Result:
+
+| Run | Elapsed | Finding |
+| --- | ---: | --- |
+| `DB/1GB/1GB_44934_33` | 18.27 s | Simple formula predicted CWND 33, but empirical optimum was around 16-17.5. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_44934_33/cwnd_192_168_88_253_44934.png)
+
+Interpretation: the same 25000 B burst penalty consumes the whole configured queue, so `Q_effective` is near zero and CWND falls to about 16.
+
+### Burst-Size Check
+
+Command:
+
+```bash
+./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 500Mbit --tbf-burst 1Mb --tbf-limit 25000b --cwnd 33
+```
+
+Result:
+
+| Run | Elapsed | Finding |
+| --- | ---: | --- |
+| `DB/1GB/1GB_41714_33` | 17.94 s | Larger burst lets the flow temporarily sit near CWND 33, but steady behavior still points lower. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_41714_33/cwnd_192_168_88_253_41714.png)
+
+Interpretation: a large bucket can hide the mismatch for a short time, but it does not remove the queue pressure caused by `R_arrival > R_tbf`.
+
+### Matching TBF Rate and Arrival Rate
+
+When the TBF rate was raised to 1 Gbit/s, the simple formula worked much better.
+
+| Setup | Run | Elapsed | Finding |
+| --- | --- | ---: | --- |
+| Reno-like, 1 Gbit/s TBF, 1 MB burst, 50000 B queue | `DB/1GB/1GB_47786_0` | 9.69 s | Baseline. |
+| CWND 67, 1 Gbit/s TBF, 1 MB burst, 50000 B queue | `DB/1GB/1GB_50912_67` | 9.27 s | Theoretical CWND 67 matched empirical 66-67. |
+| Reno-like, 1 Gbit/s TBF, 50000 B burst, 50000 B queue | `DB/1GB/1GB_38042_0` | 9.30 s | Baseline. |
+| CWND 67, 1 Gbit/s TBF, 50000 B burst, 50000 B queue | `DB/1GB/1GB_42250_67` | 9.40 s | Empirical region still around 64-67. |
+
+Plots:
+
+![reno plot](DB/1GB/1GB_47786_0/cwnd_192_168_88_253_47786.png)
+
+![optimal cwnd plot](DB/1GB/1GB_50912_67/cwnd_192_168_88_253_50912.png)
+
+![reno plot](DB/1GB/1GB_38042_0/cwnd_192_168_88_253_38042.png)
+
+![optimal cwnd plot](DB/1GB/1GB_42250_67/cwnd_192_168_88_253_42250.png)
+
+Interpretation: when `R_arrival ~= R_tbf`, `Q_tbf ~= 0`, so the original `BDP + Q_config - MSS` estimate becomes valid again.
+
+## Phase 2: Revised Equation
+
+For the 500 Mbit/s examples:
+
+```text
+R_tbf = 500 Mbit/s
+RTT = 0.4 ms
+BDP = 25000 B
+R_arrival ~= 1000 Mbit/s
+Q_tbf = 25000 * (1000 / 500 - 1) = 25000 B
+```
+
+With `Q_config = 50000 B`:
+
+```text
+Q_effective = 50000 - 25000 = 25000 B
+cwnd ~= (25000 + 25000 - 1460) / 1460 = 33
+```
+
+With `Q_config = 25000 B`:
+
+```text
+Q_effective = 25000 - 25000 = 0 B
+cwnd ~= (25000 + 0 - 1460) / 1460 = 16
+```
+
+When `Q_tbf > Q_config`, the TBF queue cannot absorb the full mismatch during one RTT. The model switches from "BDP plus effective queue" to a reduced usable BDP:
+
+```text
+usable_bdp = BDP * min(1, Q_config / Q_tbf)
+cwnd = floor((usable_bdp - MSS) / MSS)
+```
+
+## Phase 3: Validation Tests
+
+### Test 0: 200 Mbit/s, 25000 B Queue
+
+Command:
+
+```bash
+./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 200 --tbf-rate 200Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 3
+```
+
+Result:
+
+| Run | Elapsed | Finding |
+| --- | ---: | --- |
+| `DB/1GB/1GB_54264_3` | 45.14 s | Formula predicted CWND 3. |
+| `DB/1GB/1GB_35434_0` | 45.06 s | Reno-like baseline had nearly the same elapsed time. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_54264_3/cwnd_192_168_88_253_54264.png)
+
+Interpretation: at low TBF rates, elapsed time alone is not enough to identify the optimal CWND because many CWNDs saturate the bottleneck. Loss behavior must also be considered.
+
+### Test 1: 200 Mbit/s, 50000 B Queue
+
+| Run | CWND | Elapsed | Loss-recovery signal | Finding |
+| --- | ---: | ---: | ---: | --- |
+| `DB/1GB/1GB_35170_12` | 12 | 45.11 s | 0 / 2248 | Formula prediction; already throughput-limited by TBF. |
+| `DB/1GB/1GB_43370_15` | 15 | 45.05 s | 0 / 1903 | Same throughput region. |
+| `DB/1GB/1GB_44342_30` | 30 | 44.98 s | 0 / 1249 | Still clean. |
+| `DB/1GB/1GB_47504_32` | 32 | 44.96 s | 1 / 1213 | Safe upper region. |
+| `DB/1GB/1GB_34780_33` | 33 | 44.96 s | 43 / 1276 | Borderline. |
+| `DB/1GB/1GB_40442_35` | 35 | 44.99 s | 1429 / 4124 | Clearly too high. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_35170_12/cwnd_192_168_88_253_35170.png)
+
+Interpretation: if optimizing elapsed time only, CWND 12 is enough. If optimizing "largest clean CWND before repeated loss recovery", the useful empirical region is closer to 30-32.
+
+### Test 2: 750 Mbit/s, 50000 B Queue
+
+The first assumption `R_arrival = 1000 Mbit/s` predicted CWND 57, but that was too high.
+
+| Run | CWND | Elapsed | Loss-recovery signal | Finding |
+| --- | ---: | ---: | ---: | --- |
+| `DB/1GB/1GB_41662_57` | 57 | 12.07 s | 1054 / 4565 | Predicted by the too-low arrival estimate; too lossy. |
+| `DB/1GB/1GB_47470_36` | 36 | 12.02 s | 184 / 3347 | Good candidate. |
+| `DB/1GB/1GB_49228_37` | 37 | 12.07 s | 431 / 3557 | More loss. |
+| `DB/1GB/1GB_39108_38` | 38 | 12.03 s | 199 / 3544 | Good candidate. |
+| `DB/1GB/1GB_49024_39` | 39 | 12.07 s | 404 / 3537 | More loss. |
+| `DB/1GB/1GB_55568_40` | 40 | 12.04 s | 494 / 3792 | More loss. |
+| `DB/1GB/1GB_34342_42` | 42 | 12.19 s | 339 / 3736 | Still plausible but slower. |
+
+Representative plot:
+
+![cwnd plot](DB/1GB/1GB_47470_36/cwnd_192_168_88_253_47470.png)
+
+Reverse-estimating from CWND 36-42 gives `R_arrival ~= 1235-1420 Mbit/s`, not 1000 Mbit/s. This is why the revised final table uses an arrival range for this test.
+
+### Test 3: 750 Mbit/s, 25000 B Queue
+
+With `R_arrival ~= 1420 Mbit/s`, the formula predicts CWND 18.
+
+| Run | CWND | Elapsed | Loss-recovery signal | Finding |
+| --- | ---: | ---: | ---: | --- |
+| `DB/1GB/1GB_47064_0` | 0 | 12.16 s | 3720 / 9924 | Reno-like baseline is lossy. |
+| `DB/1GB/1GB_55592_18` | 18 | 12.02 s | 34 / 3128 | Best clean candidate. |
+| `DB/1GB/1GB_42404_20` | 20 | 12.06 s | 1792 / 6341 | Too lossy. |
+| `DB/1GB/1GB_55324_22` | 22 | 12.12 s | 3623 / 10188 | Too lossy. |
+| `DB/1GB/1GB_32982_25` | 25 | 12.13 s | 3657 / 9990 | Too lossy. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_55592_18/cwnd_192_168_88_253_55592.png)
+
+### Test 4a: 750 Mbit/s, 12500 B Queue
+
+The original note labels this calculation as `R_arrival = 1420 Mbit/s`, but the arithmetic uses the burst penalty for `R_arrival ~= 1235 Mbit/s`. Keeping `1420 Mbit/s` would predict a much smaller CWND.
+
+| Run | CWND | Elapsed | Loss-recovery signal | Finding |
+| --- | ---: | ---: | ---: | --- |
+| `DB/1GB/1GB_38038_0` | 0 | 14.56 s | 6486 / 15521 | Reno-like baseline is slower and lossy. |
+| `DB/1GB/1GB_33854_12` | 12 | 12.05 s | 1357 / 5865 | Throughput is good, but loss is still substantial. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_33854_12/cwnd_192_168_88_253_33854.png)
+
+Interpretation: the throughput result supports CWND 12, but the loss signal says this test should be repeated with more CWND points around 8-12.
+
+### Test 4b: 750 Mbit/s, 6250 B Queue
+
+This was also labeled "Test 4" in the original notes. I keep it separate as Test 4b because it uses a different queue size.
+
+| Run | CWND | Elapsed | Loss-recovery signal | Finding |
+| --- | ---: | ---: | ---: | --- |
+| `DB/1GB/1GB_44108_0` | 0 | 64.73 s | 17066 / 36726 | Reno-like baseline collapses. |
+| `DB/1GB/1GB_60834_5` | 5 | 21.78 s | 1 / 3694 | Clean but not fully TBF-rate-limited. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_60834_5/cwnd_192_168_88_253_60834.png)
+
+Interpretation: CWND 5 is clean and much better than Reno, but elapsed time is still above the ideal 750 Mbit/s transfer time. This is a good candidate for further local search around CWND 5-8.
+
+### Test 5: 500 Mbit/s, 50000 B Queue
+
+| Run | CWND | Elapsed | Loss-recovery signal | Finding |
+| --- | ---: | ---: | ---: | --- |
+| `DB/1GB/1GB_36664_0` | 0 | 18.02 s | 1345 / 5055 | Reno-like baseline is lossy. |
+| `DB/1GB/1GB_49068_33` | 33 | 18.04 s | 13 / 2279 | Formula prediction works. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_49068_33/cwnd_192_168_88_253_49068.png)
+
+### Test 6: 500 Mbit/s, 25000 B Queue
+
+| Run | CWND | Elapsed | Loss-recovery signal | Finding |
+| --- | ---: | ---: | ---: | --- |
+| `DB/1GB/1GB_37850_0` | 0 | 18.06 s | 4455 / 11370 | Reno-like baseline is lossy. |
+| `DB/1GB/1GB_52256_16` | 16 | 18.05 s | 1 / 2864 | Formula prediction works. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_52256_16/cwnd_192_168_88_253_52256.png)
+
+### Test 7: 500 Mbit/s, 12500 B Queue
+
+| Run | CWND | Elapsed | Loss-recovery signal | Finding |
+| --- | ---: | ---: | ---: | --- |
+| `DB/1GB/1GB_48698_0` | 0 | 18.68 s | 12118 / 26779 | Reno-like baseline is lossy. |
+| `DB/1GB/1GB_60200_7` | 7 | 18.08 s | 0 / 4132 | Formula prediction; clean. |
+| `DB/1GB/1GB_38296_8` | 8 | 18.13 s | 0 / 3595 | Also clean. |
+| `DB/1GB/1GB_43544_9` | 9 | 18.04 s | 5 / 3780 | Slightly faster, still mostly clean. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_60200_7/cwnd_192_168_88_253_60200.png)
+
+Interpretation: the formula gives the conservative clean point. Empirically, CWND 7-9 all perform similarly.
+
+### Test 8: 500 Mbit/s, 6250 B Queue
+
+| Run | CWND | Elapsed | Loss-recovery signal | Finding |
+| --- | ---: | ---: | ---: | --- |
+| `DB/1GB/1GB_52064_0` | 0 | 44.57 s | 18447 / 39334 | Reno-like baseline collapses. |
+| `DB/1GB/1GB_34330_3` | 3 | 39.57 s | 1 / 3690 | Formula prediction, but too slow. |
+| `DB/1GB/1GB_54646_4` | 4 | 22.97 s | 1 / 3739 | Better but still slow. |
+| `DB/1GB/1GB_44654_7` | 7 | 18.29 s | 3 / 4061 | Empirical optimum among tested points. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_44654_7/cwnd_192_168_88_253_44654.png)
+
+Interpretation: this is a mismatch case. The reduced-BDP formula underpredicts the best empirical CWND. Either the short-window `R_arrival` estimate is too high for this small queue, or the model is too pessimistic when the TBF queue is extremely small.
+
+### Test 9: 250 Mbit/s, 50000 B Queue
+
+| Run | CWND | Elapsed | Loss-recovery signal | Finding |
+| --- | ---: | ---: | ---: | --- |
+| `DB/1GB/1GB_51330_0` | 0 | 36.02 s | 1421 / 4329 | Reno-like baseline is lossy. |
+| `DB/1GB/1GB_57344_33` | 33 | 36.00 s | 29 / 1401 | Empirical optimum. |
+| `DB/1GB/1GB_37848_33` | 33 | 36.00 s | 23 / 1384 | Confirmation run. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_57344_33/cwnd_192_168_88_253_57344.png)
+
+Reverse-estimating from CWND 33 gives `R_arrival ~= 507 Mbit/s`.
+
+### Test 10: 250 Mbit/s, 25000 B Queue
+
+| Run | CWND | Elapsed | Loss-recovery signal | Finding |
+| --- | ---: | ---: | ---: | --- |
+| `DB/1GB/1GB_42518_0` | 0 | 36.07 s | 4823 / 11905 | Reno-like baseline is lossy. |
+| `DB/1GB/1GB_33412_16` | 16 | 36.01 s | 22 / 2226 | Formula value is 15.88, tested as 16. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_33412_16/cwnd_192_168_88_253_33412.png)
+
+### Test 11: 250 Mbit/s, 12500 B Queue
+
+| Run | CWND | Elapsed | Loss-recovery signal | Finding |
+| --- | ---: | ---: | ---: | --- |
+| `DB/1GB/1GB_51184_0` | 0 | 36.03 s | 13737 / 30440 | Reno-like baseline is lossy. |
+| `DB/1GB/1GB_42770_7` | 7 | 36.08 s | 37 / 4616 | Formula prediction; clean. |
+| `DB/1GB/1GB_45006_8` | 8 | 35.96 s | 2 / 3774 | Also clean and slightly faster. |
+| `DB/1GB/1GB_51208_9` | 9 | 36.03 s | 8807 / 20828 | Too lossy. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_42770_7/cwnd_192_168_88_253_42770.png)
+
+Interpretation: CWND 7-8 is the useful empirical region; CWND 9 is too lossy.
+
+### Test 12: 250 Mbit/s, 6250 B Queue
+
+| Run | CWND | Elapsed | Loss-recovery signal | Finding |
+| --- | ---: | ---: | ---: | --- |
+| `DB/1GB/1GB_50774_0` | 0 | 37.68 s | 41135 / 84049 | Reno-like baseline is lossy. |
+| `DB/1GB/1GB_49192_3` | 3 | 39.34 s | 1 / 3667 | Formula prediction, but too slow. |
+| `DB/1GB/1GB_36250_5` | 5 | 36.29 s | 12 / 3803 | Empirical optimum among tested points. |
+| `DB/1GB/1GB_33640_6` | 6 | 36.44 s | 39685 / 81048 | Too lossy. |
+
+Plot:
+
+![cwnd plot](DB/1GB/1GB_36250_5/cwnd_192_168_88_253_36250.png)
+
+Interpretation: like Test 8, the very small queue case is not well predicted by the reduced-BDP model.
+
+## Main Findings
+
+1. When `R_arrival ~= R_tbf`, the simple `BDP + Q_config - MSS` estimate works.
+2. When `R_arrival > R_tbf`, the model must subtract the burst penalty from the configured TBF queue.
+3. When the burst penalty is larger than the configured queue size (`Q_tbf > Q_config`), the TBF cannot absorb one RTT of enqueue/drain mismatch. I handled this by setting `Q_effective = 0`, scaling the usable BDP as `usable_bdp = BDP * min(1, Q_config / Q_tbf)`, and then calculating `cwnd = floor((usable_bdp - MSS) / MSS)`.
+4. Whole-transfer elapsed time is often insensitive to CWND once the TBF bottleneck is saturated. Loss-recovery rate is a better signal for choosing a clean CWND.
+5. `R_arrival` is not a stable constant. Reverse-estimated values differ by TBF rate and queue size.
+6. The reduced-BDP formula works for several small-queue cases, but it underpredicts CWND for the 500 Mbit/s / 6250 B and 250 Mbit/s / 6250 B tests.
+
+## Recommended Next Step
+
+Use RTT-windowed or percentile-based `R_arrival` from `r_arrival.txt` instead of whole-transfer averages. The useful value for the model is the short burst that fills TBF during approximately one base RTT, not the average throughput of the entire transfer.
+
+## Final Table: Test 1 to Test 12
+
+The original notes contain two headings named Test 4. They are separated here as Test 4a and Test 4b because they use different `Q_config` values.
+Note that the case where R_tbf == 1000Mbit is not tested here as when R_tbf ~= R_arrival, the theoretical predicition of the initial equation `optimal cwnd = BDP + Q_config - MSS` works pretty well.
+
+| Test | Token generation rate (`R_tbf`) | BDP | Burst penalty (`Q_tbf`) | R_arrival (estimate) | Q_config | Q_effective | Theoretical optimal cwnd | Empirical cwnd |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Test 1 | 200 Mbit/s | 10000 B | 40000 B | 1000 Mbit/s | 50000 B | 10000 B | 12 | 30-32 safe, 33 borderline |
+| Test 2 | 750 Mbit/s | 37500 B | 24250-33500 B | 1235-1420 Mbit/s | 50000 B | 16500-25750 B | 36-42 | 36-42, with 36/38 safest |
+| Test 3 | 750 Mbit/s | 37500 B | 33500 B | 1420 Mbit/s | 25000 B | 0 B | 18 | 18 |
+| Test 4a | 750 Mbit/s | 37500 B | 24250 B | 1235 Mbit/s | 12500 B | 0 B | 12 | 12, but loss remains high |
+| Test 4b | 750 Mbit/s | 37500 B | 24250 B | 1235 Mbit/s | 6250 B | 0 B | 5 | 5 |
+| Test 5 | 500 Mbit/s | 25000 B | 25000 B | 1000 Mbit/s | 50000 B | 25000 B | 33 | 33 |
+| Test 6 | 500 Mbit/s | 25000 B | 25000 B | 1000 Mbit/s | 25000 B | 0 B | 16 | 16 |
+| Test 7 | 500 Mbit/s | 25000 B | 25000 B | 1000 Mbit/s | 12500 B | 0 B | 7 | 7-9 |
+| Test 8 | 500 Mbit/s | 25000 B | 25000 B | 1000 Mbit/s | 6250 B | 0 B | 3 | 7 |
+| Test 9 | 250 Mbit/s | 12500 B | 12850 B | 507 Mbit/s | 50000 B | 37150 B | 33 | 33 |
+| Test 10 | 250 Mbit/s | 12500 B | 12850 B | 507 Mbit/s | 25000 B | 12150 B | 16 | 16 |
+| Test 11 | 250 Mbit/s | 12500 B | 12850 B | 507 Mbit/s | 12500 B | 0 B | 7 | 7-8 |
+| Test 12 | 250 Mbit/s | 12500 B | 12850 B | 507 Mbit/s | 6250 B | 0 B | 3 | 5 |
