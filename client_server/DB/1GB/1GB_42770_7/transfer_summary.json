@@ -1,0 +1,15 @@
+{
+  "cca": "my_cca",
+  "client_ip": "192.168.88.253",
+  "client_port": 42770,
+  "elapsed_seconds": 36.08043885231018,
+  "mib_per_second": 28.38102951551086,
+  "server_host": "0.0.0.0",
+  "server_port": 9000,
+  "size_gib": 1,
+  "total_bytes": 1073741824,
+  "max_pacing_rate_bytes_per_second": 125000000,
+  "average_r_arrival_mbit": 241.46753060228752,
+  "max_r_arrival_mbit": 588.412736,
+  "r_arrival_sample_count": 36014
+}
