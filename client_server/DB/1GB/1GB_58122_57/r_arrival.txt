@@ -1,0 +1,6 @@
+# R_arrival samples from kprobe:tbf_enqueue
+# interval_seconds=0.001000000
+timestamp,interval_seconds,bytes,packets,r_arrival_mbit
+# bpftrace: stdin:4:13-22: ERROR: syntax error, unexpected (, expecting }
+# bpftrace: @bytes += (uint64)(((struct sk_buff *)arg0)->len);
+# bpftrace: ~~~~~~~~~

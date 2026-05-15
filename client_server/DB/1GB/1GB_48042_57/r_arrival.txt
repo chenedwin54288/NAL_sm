@@ -1,0 +1,8 @@
+# R_arrival samples from kprobe:tbf_enqueue
+# interval_seconds=0.001000000
+timestamp,interval_seconds,bytes,packets,r_arrival_mbit
+# bpftrace: stdin:11:10-12: WARNING: arithmetic on integers of different signs: 'int64' and 'unsigned int32' can lead to undefined behavior
+# bpftrace: @bytes += ((struct sk_buff *)arg0)->len;
+# bpftrace: ~~
+# bpftrace: Attaching 3 probes...
+# bpftrace: ERROR: Could not resolve symbol: /proc/self/exe:BEGIN_trigger

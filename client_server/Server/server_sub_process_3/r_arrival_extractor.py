@@ -29,7 +29,9 @@ running = True
 bpftrace_process = None
 
 
-VALUE_PATTERN = re.compile(r"^@(?P<name>bytes|pkts):\s+(?P<value>\d+)\s*$")
+SAMPLE_PATTERN = re.compile(
+    r"^sample,(?P<delta_ns>\d+),(?P<bytes>\d+),(?P<packets>\d+)\s*$"
+)
 
 
 def handle_stop(signum, frame):
@@ -67,16 +69,23 @@ def build_bpftrace_program(interval_ms):
     return f"""
 kprobe:tbf_enqueue
 {{
-  @bytes = sum(((struct sk_buff *)arg0)->len);
-  @pkts = count();
+  @bytes += ((struct sk_buff *)arg0)->len;
+  @pkts += 1;
 }}
 
 interval:ms:{interval_ms}
 {{
-  print(@bytes);
-  print(@pkts);
-  clear(@bytes);
-  clear(@pkts);
+  $now = nsecs;
+
+  if (@last_ns == 0) {{
+    @last_ns = $now;
+  }} else {{
+    $delta_ns = $now - @last_ns;
+    printf("sample,%llu,%llu,%llu\\n", $delta_ns, @bytes, @pkts);
+    @last_ns = $now;
+    @bytes = 0;
+    @pkts = 0;
+  }}
 }}
 """
 
@@ -97,12 +106,16 @@ def build_bpftrace_command(program):
     return [sudo_path, "-n", *command]
 
 
-def parse_value(line):
-    match = VALUE_PATTERN.match(line.strip())
+def parse_sample(line):
+    match = SAMPLE_PATTERN.match(line.strip())
     if not match:
         return None
 
-    return match.group("name"), int(match.group("value"))
+    return (
+        int(match.group("delta_ns")),
+        int(match.group("bytes")),
+        int(match.group("packets")),
+    )
 
 
 def write_header(output_file, interval_seconds):
@@ -158,9 +171,6 @@ def run_extractor(output_path, interval_ms):
             print(f"Failed to start bpftrace: {error}", file=sys.stderr, flush=True)
             return 1
 
-        pending_bytes = None
-        pending_pkts = None
-
         assert bpftrace_process.stdout is not None
         while running:
             line = bpftrace_process.stdout.readline()
@@ -170,23 +180,18 @@ def run_extractor(output_path, interval_ms):
                 time.sleep(0.01)
                 continue
 
-            parsed = parse_value(line)
+            parsed = parse_sample(line)
             if parsed is None:
                 stripped = line.strip()
                 if stripped:
                     append_comment(output_file, f"bpftrace: {stripped}")
                 continue
 
-            name, value = parsed
-            if name == "bytes":
-                pending_bytes = value
-            elif name == "pkts":
-                pending_pkts = value
-
-            if pending_bytes is not None and pending_pkts is not None:
-                append_sample(output_file, interval_seconds, pending_bytes, pending_pkts)
-                pending_bytes = None
-                pending_pkts = None
+            delta_ns, bytes_count, packet_count = parsed
+            interval_seconds = delta_ns / 1_000_000_000.0
+            if interval_seconds <= 0:
+                continue
+            append_sample(output_file, interval_seconds, bytes_count, packet_count)
 
         stop_bpftrace()
         return bpftrace_process.returncode or 0

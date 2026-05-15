@@ -1,0 +1,8 @@
+Warning: R_arrival extractor did not produce a sample before transfer start
+Generating 1073741824 GB of zeros
+Started log extractor with PID 74527
+Listening on 0.0.0.0:9000 ...
+Client connected from ('192.168.88.253', 48042)
+Started R_arrival extractor with PID 74546
+Sent 1073741824 bytes in 12.03s (85.11 MiB/s)
+Stopped log extractor
