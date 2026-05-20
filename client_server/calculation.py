@@ -6,21 +6,23 @@
 #   --r-arrival-mbit 1000 \
 #   --rtt-ms 0.4 \
 #   --tbf-limit 2920b
-#   --value-only
+#   --value-only or --json
 
 # Without arrival-rate penalty (R_arrival = R_tbf):
 # client_server/calculation.py \
 #   --rate-mbit 250 \
 #   --rtt-ms 0.4 \
 #   --tbf-limit 2920b
-#   --value-only
+#   --value-only or --json
 
-# Reverse-calculate R_arrival from an empirical optimal CWND:
+# Reverse mode to infer R_arrival from an empirical optimal CWND:
 # client_server/calculation.py \
 #   --rate-mbit 500 \
 #   --rtt-ms 0.4 \
 #   --tbf-limit 50000b \
-#   --optimal-cwnd 33
+#   --optimal-cwnd 33 \
+#   --value-only
+
 
 import argparse
 import json

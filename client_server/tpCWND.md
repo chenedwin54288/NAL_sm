@@ -1,8 +1,9 @@
-- Note below, the TCP packets in the queue also includes the header, so we will just consider 1p = 1500 bytes.
-- Also note the calculation process between different algorithms
+- The TCP packets in the TBF queue include headers. Earlier packet-count sweeps used `1p = 1500 bytes`.
+- For the next sweep, use byte-sized queue limits directly: `6250b`, `12500b`, `25000b`, `50000b`, and `100000b`.
+- Also note the calculation process between different algorithms.
 
 # R_arrival into consideration
-Whenever `R_arrival > R_tbf`. 
+Whenever `R_arrival > R_tbf`.
 ```text
 BDP = R_tbf * RTT_base
 
@@ -20,573 +21,383 @@ if Q_tbf > Q_config:
     cwnd = floor((usable_bdp - MSS) / MSS)
 ```
 
-# Original algorithm 
+# Original algorithm
 ```text
 BDP = R_tbf * RTT_base
 optimal_cwnd = floor((BDP + Q_config - MSS) / MSS)
 ```
 
 
-# TGR: 250 Mbits (burst size 50000)
-## 1p (TimeoutError: [Errno 110] Connection timed out)
+
+# TGR: 250 Mbit/s (burst size 50000b)
+## Q_config = 6250 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 1500b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-### BDP + Queue_effective - MSS
-### BDP + Queue_size - MSS
-### BDP 
-
-
-## 2p 
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 3000b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 11 (`python3 calculation.py --rate-mbit 250 --rtt-ms 0.4 --tbf-limit 6250b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 11
 
-### BDP 
+### BDP
+- cwnd: 8 (`floor(BDP / MSS)`, BDP = 12500 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 8
 
-
-
-## 3p
+## Q_config = 12500 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 4500b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 16 (`python3 calculation.py --rate-mbit 250 --rtt-ms 0.4 --tbf-limit 12500b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 16
 
-### BDP 
+### BDP
+- cwnd: 8 (`floor(BDP / MSS)`, BDP = 12500 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 8
 
-
-
-## 7p
+## Q_config = 25000 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 10500b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 24 (`python3 calculation.py --rate-mbit 250 --rtt-ms 0.4 --tbf-limit 25000b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 24
 
-### BDP 
+### BDP
+- cwnd: 8 (`floor(BDP / MSS)`, BDP = 12500 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 8
 
-
-
-
-## 10p
+## Q_config = 50000 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 15000b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 41 (`python3 calculation.py --rate-mbit 250 --rtt-ms 0.4 --tbf-limit 50000b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 41
 
-### BDP 
+### BDP
+- cwnd: 8 (`floor(BDP / MSS)`, BDP = 12500 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 8
 
-
-
-
-## 11p 
+## Q_config = 100000 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 16500b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 76 (`python3 calculation.py --rate-mbit 250 --rtt-ms 0.4 --tbf-limit 100000b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 76
 
-### BDP 
+### BDP
+- cwnd: 8 (`floor(BDP / MSS)`, BDP = 12500 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 8
 
 
 
 
-## 20p
+
+
+
+
+
+
+
+
+
+
+
+# TGR: 500 Mbit/s (burst size 50000b)
+## Q_config = 6250 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 30000b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 20 (`python3 calculation.py --rate-mbit 500 --rtt-ms 0.4 --tbf-limit 6250b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 20
 
-### BDP 
+### BDP
+- cwnd: 17 (`floor(BDP / MSS)`, BDP = 25000 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 17
 
-
-## 33p
+## Q_config = 12500 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 49500b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 24 (`python3 calculation.py --rate-mbit 500 --rtt-ms 0.4 --tbf-limit 12500b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 24
 
-### BDP 
+### BDP
+- cwnd: 17 (`floor(BDP / MSS)`, BDP = 25000 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 17
 
-
-
-
-## 67p
+## Q_config = 25000 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 250 --tbf-rate 250Mbit --tbf-burst 50000b --tbf-limit 100500b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 33 (`python3 calculation.py --rate-mbit 500 --rtt-ms 0.4 --tbf-limit 25000b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 33
 
-### BDP 
+### BDP
+- cwnd: 17 (`floor(BDP / MSS)`, BDP = 25000 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 17
 
-
-
-
-
-
-
-
-
-
-# TGR: 500 Mbits (burst size 50000)
-
-## 1p
+## Q_config = 50000 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 1500b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 50 (`python3 calculation.py --rate-mbit 500 --rtt-ms 0.4 --tbf-limit 50000b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 50
 
-### BDP 
+### BDP
+- cwnd: 17 (`floor(BDP / MSS)`, BDP = 25000 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 17
 
-
-## 2p 
+## Q_config = 100000 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 3000b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 84 (`python3 calculation.py --rate-mbit 500 --rtt-ms 0.4 --tbf-limit 100000b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 84
 
-### BDP 
+### BDP
+- cwnd: 17 (`floor(BDP / MSS)`, BDP = 25000 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 17
 
 
 
-## 3p
+
+
+
+
+
+
+
+
+
+
+
+
+
+# TGR: 750 Mbit/s (burst size 50000b)
+## Q_config = 6250 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 4500b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 28 (`python3 calculation.py --rate-mbit 750 --rtt-ms 0.4 --tbf-limit 6250b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 28
 
-### BDP 
+### BDP
+- cwnd: 25 (`floor(BDP / MSS)`, BDP = 37500 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 25
 
-
-
-## 7p
+## Q_config = 12500 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 10500b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 33 (`python3 calculation.py --rate-mbit 750 --rtt-ms 0.4 --tbf-limit 12500b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 33
 
-### BDP 
+### BDP
+- cwnd: 25 (`floor(BDP / MSS)`, BDP = 37500 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 25
 
-
-
-
-## 10p
+## Q_config = 25000 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 15000b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 41 (`python3 calculation.py --rate-mbit 750 --rtt-ms 0.4 --tbf-limit 25000b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 41
 
-### BDP 
+### BDP
+- cwnd: 25 (`floor(BDP / MSS)`, BDP = 37500 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 25
 
-
-
-
-## 11p 
+## Q_config = 50000 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 16500b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 58 (`python3 calculation.py --rate-mbit 750 --rtt-ms 0.4 --tbf-limit 50000b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 58
 
-### BDP 
+### BDP
+- cwnd: 25 (`floor(BDP / MSS)`, BDP = 37500 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 25
 
-
-
-
-## 20p
+## Q_config = 100000 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 30000b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 93 (`python3 calculation.py --rate-mbit 750 --rtt-ms 0.4 --tbf-limit 100000b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 93
 
-### BDP 
+### BDP
+- cwnd: 25 (`floor(BDP / MSS)`, BDP = 37500 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 25
 
 
-## 33p
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# TGR: 1000 Mbit/s (burst size 50000b)
+## Q_config = 6250 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 49500b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 37 (`python3 calculation.py --rate-mbit 1000 --rtt-ms 0.4 --tbf-limit 6250b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 37
 
-### BDP 
+### BDP
+- cwnd: 34 (`floor(BDP / MSS)`, BDP = 50000 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 34
 
-
-
-
-## 67p
+## Q_config = 12500 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 500 --tbf-rate 500Mbit --tbf-burst 50000b --tbf-limit 100500b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 41 (`python3 calculation.py --rate-mbit 1000 --rtt-ms 0.4 --tbf-limit 12500b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 41
 
-### BDP 
+### BDP
+- cwnd: 34 (`floor(BDP / MSS)`, BDP = 50000 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 34
 
-
-
-
-
-
-# TGR: 750 Mbits (burst size 50000)
-
-## 1p
+## Q_config = 25000 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 1500b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 50 (`python3 calculation.py --rate-mbit 1000 --rtt-ms 0.4 --tbf-limit 25000b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 50
 
-### BDP 
+### BDP
+- cwnd: 34 (`floor(BDP / MSS)`, BDP = 50000 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 34
 
-
-## 2p 
+## Q_config = 50000 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 3000b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
+- cwnd: 67 (`python3 calculation.py --rate-mbit 1000 --rtt-ms 0.4 --tbf-limit 50000b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 67
 
-### BDP 
+### BDP
+- cwnd: 34 (`floor(BDP / MSS)`, BDP = 50000 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 34
 
-
-
-## 3p
+## Q_config = 100000 bytes
 ### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 4500b --cwnd 0
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 0
 
 ### Empirical optimal cwnd (maximum throughput)
-
 
 ### BDP + Queue_effective - MSS
 
 ### BDP + Queue_size - MSS
-
-### BDP 
-
-
-
-## 7p
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 10500b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
-
-
-## 10p
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 15000b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
-
-
-## 11p 
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 16500b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
-
-
-## 20p
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 30000b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
-## 33p
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 49500b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
-
-
-## 67p
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 750 --tbf-rate 750Mbit --tbf-burst 50000b --tbf-limit 100500b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
-
-
-
-
-# TGR: 1000 Mbits (burst size 50000)
-
-## 1p
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 1500b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
-## 2p 
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 3000b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
-
-## 3p
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 4500b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
-
-## 7p
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 10500b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
-
-
-## 10p
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 15000b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
-
-
-## 11p 
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 16500b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
-
-
-## 20p
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 30000b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
-## 33p
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 49500b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
-
-
-## 67p
-### TCP Reno
-- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 100500b --cwnd 0
-
-### Empirical optimal cwnd (maximum throughput)
-
-
-### BDP + Queue_effective - MSS
-
-### BDP + Queue_size - MSS
-
-### BDP 
-
-
+- cwnd: 101 (`python3 calculation.py --rate-mbit 1000 --rtt-ms 0.4 --tbf-limit 100000b --json`)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 101
+
+### BDP
+- cwnd: 34 (`floor(BDP / MSS)`, BDP = 50000 bytes)
+- ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 34

@@ -134,6 +134,68 @@ print(value)
 PY
 }
 
+# Print final experiment metrics gathered from the run artifacts.
+print_final_metrics() {
+  python3 - "$1" "$2" "$3" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+summary_path = Path(sys.argv[1])
+ip_info_path = Path(sys.argv[2])
+server_log_path = Path(sys.argv[3])
+
+
+def read_json(path):
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def fmt_float(value, digits=6):
+    if value is None or value == "":
+        return "N/A"
+    return f"{float(value):.{digits}f}"
+
+
+summary = read_json(summary_path)
+ip_info = read_json(ip_info_path)
+
+row_count = ip_info.get("row_count")
+loss_recovery = ip_info.get("phase_counts", {}).get("loss_recovery")
+drop_rate = None
+if row_count:
+    drop_rate = (loss_recovery or 0) / row_count
+
+post_mib = summary.get("post_slow_start_mib_per_second")
+post_mbit = summary.get("post_slow_start_mbit_per_second")
+post_bytes = summary.get("post_slow_start_bytes")
+post_elapsed = summary.get("post_slow_start_elapsed_seconds")
+if post_mbit is None and post_bytes is not None and post_elapsed:
+    post_mbit = post_bytes * 8.0 / post_elapsed / 1_000_000.0
+
+after_slow_start_line = ""
+if server_log_path.exists():
+    with server_log_path.open("r", encoding="utf-8") as log_file:
+        for line in log_file:
+            if "After slow start:" in line:
+                after_slow_start_line = line.strip()
+
+print(f"Drop rate: {fmt_float(drop_rate)}", end="")
+if row_count:
+    print(f" ({loss_recovery or 0}/{row_count} loss_recovery rows)")
+else:
+    print(" (N/A)")
+print(f"post_slow_start_mbit_per_second: {fmt_float(post_mbit)}")
+print(f"post_slow_start_mib_per_second: {fmt_float(post_mib)}")
+print(
+    "Server after slow start: "
+    f"{after_slow_start_line if after_slow_start_line else 'N/A'}"
+)
+PY
+}
+
 # Parse command line arguments. Most options directly override the defaults above.
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -389,3 +451,4 @@ log "Done"
 printf 'Results: %s\n' "$OUTPUT_DIR"
 printf 'Client: %s:%s\n' "$CLIENT_IP" "$CLIENT_PORT"
 printf 'Elapsed seconds: %s\n' "$ELAPSED_SECONDS"
+print_final_metrics "$OUTPUT_DIR/transfer_summary.json" "$INFO_JSON" "$OUTPUT_DIR/server.log"
