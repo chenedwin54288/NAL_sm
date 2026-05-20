@@ -77,11 +77,11 @@ Result:
 
 | Run | Elapsed | Finding |
 | --- | ---: | --- |
-| `DB/1GB/1GB_48896_50` | 18.23 s | Simple formula predicted CWND 50, but empirical optimum was closer to 33-34. |
+| `DB/1GB/phase1/1GB_48896_50` | 18.23 s | Simple formula predicted CWND 50, but empirical optimum was closer to 33-34. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_48896_50/cwnd_192_168_88_253_48896.png)
+![cwnd plot](DB/1GB/phase1/1GB_48896_50/cwnd_192_168_88_253_48896.png)
 
 Interpretation: with a 500 Mbit/s TBF and roughly 1 Gbit/s arrival into TBF, about 25000 B of the configured 50000 B queue is consumed by the rate mismatch during one RTT. The effective queue is therefore closer to 25000 B, making CWND around 33.
 
@@ -97,11 +97,11 @@ Result:
 
 | Run | Elapsed | Finding |
 | --- | ---: | --- |
-| `DB/1GB/1GB_44934_33` | 18.27 s | Simple formula predicted CWND 33, but empirical optimum was around 16-17.5. |
+| `DB/1GB/phase1/1GB_44934_33` | 18.27 s | Simple formula predicted CWND 33, but empirical optimum was around 16-17.5. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_44934_33/cwnd_192_168_88_253_44934.png)
+![cwnd plot](DB/1GB/phase1/1GB_44934_33/cwnd_192_168_88_253_44934.png)
 
 Interpretation: the same 25000 B burst penalty consumes the whole configured queue, so `Q_effective` is near zero and CWND falls to about 16.
 
@@ -117,11 +117,11 @@ Result:
 
 | Run | Elapsed | Finding |
 | --- | ---: | --- |
-| `DB/1GB/1GB_41714_33` | 17.94 s | Larger burst lets the flow temporarily sit near CWND 33, but steady behavior still points lower. |
+| `DB/1GB/phase1/1GB_41714_33` | 17.94 s | Larger burst lets the flow temporarily sit near CWND 33, but steady behavior still points lower. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_41714_33/cwnd_192_168_88_253_41714.png)
+![cwnd plot](DB/1GB/phase1/1GB_41714_33/cwnd_192_168_88_253_41714.png)
 
 Interpretation: a large bucket can hide the mismatch for a short time, but it does not remove the queue pressure caused by `R_arrival > R_tbf`.
 
@@ -131,20 +131,20 @@ When the TBF rate was raised to 1 Gbit/s, the simple formula worked much better.
 
 | Setup | Run | Elapsed | Finding |
 | --- | --- | ---: | --- |
-| Reno-like, 1 Gbit/s TBF, 1 MB burst, 50000 B queue | `DB/1GB/1GB_47786_0` | 9.69 s | Baseline. |
-| CWND 67, 1 Gbit/s TBF, 1 MB burst, 50000 B queue | `DB/1GB/1GB_50912_67` | 9.27 s | Theoretical CWND 67 matched empirical 66-67. |
-| Reno-like, 1 Gbit/s TBF, 50000 B burst, 50000 B queue | `DB/1GB/1GB_38042_0` | 9.30 s | Baseline. |
-| CWND 67, 1 Gbit/s TBF, 50000 B burst, 50000 B queue | `DB/1GB/1GB_42250_67` | 9.40 s | Empirical region still around 64-67. |
+| Reno-like, 1 Gbit/s TBF, 1 MB burst, 50000 B queue | `DB/1GB/phase1/1GB_47786_0` | 9.69 s | Baseline. |
+| CWND 67, 1 Gbit/s TBF, 1 MB burst, 50000 B queue | `DB/1GB/phase1/1GB_50912_67` | 9.27 s | Theoretical CWND 67 matched empirical 66-67. |
+| Reno-like, 1 Gbit/s TBF, 50000 B burst, 50000 B queue | `DB/1GB/phase1/1GB_38042_0` | 9.30 s | Baseline. |
+| CWND 67, 1 Gbit/s TBF, 50000 B burst, 50000 B queue | `DB/1GB/phase1/1GB_42250_67` | 9.40 s | Empirical region still around 64-67. |
 
 Plots:
 
-![reno plot](DB/1GB/1GB_47786_0/cwnd_192_168_88_253_47786.png)
+![reno plot](DB/1GB/phase1/1GB_47786_0/cwnd_192_168_88_253_47786.png)
 
-![optimal cwnd plot](DB/1GB/1GB_50912_67/cwnd_192_168_88_253_50912.png)
+![optimal cwnd plot](DB/1GB/phase1/1GB_50912_67/cwnd_192_168_88_253_50912.png)
 
-![reno plot](DB/1GB/1GB_38042_0/cwnd_192_168_88_253_38042.png)
+![reno plot](DB/1GB/phase1/1GB_38042_0/cwnd_192_168_88_253_38042.png)
 
-![optimal cwnd plot](DB/1GB/1GB_42250_67/cwnd_192_168_88_253_42250.png)
+![optimal cwnd plot](DB/1GB/phase1/1GB_42250_67/cwnd_192_168_88_253_42250.png)
 
 Interpretation: when `R_arrival ~= R_tbf`, `Q_tbf ~= 0`, so the original `BDP + Q_config - MSS` estimate becomes valid again.
 
@@ -195,12 +195,12 @@ Result:
 
 | Run | Elapsed | Finding |
 | --- | ---: | --- |
-| `DB/1GB/1GB_54264_3` | 45.14 s | Formula predicted CWND 3. |
-| `DB/1GB/1GB_35434_0` | 45.06 s | Reno-like baseline had nearly the same elapsed time. |
+| `DB/1GB/phase1/1GB_54264_3` | 45.14 s | Formula predicted CWND 3. |
+| `DB/1GB/phase1/1GB_35434_0` | 45.06 s | Reno-like baseline had nearly the same elapsed time. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_54264_3/cwnd_192_168_88_253_54264.png)
+![cwnd plot](DB/1GB/phase1/1GB_54264_3/cwnd_192_168_88_253_54264.png)
 
 Interpretation: at low TBF rates, elapsed time alone is not enough to identify the optimal CWND because many CWNDs saturate the bottleneck. Loss behavior must also be considered.
 
@@ -208,16 +208,16 @@ Interpretation: at low TBF rates, elapsed time alone is not enough to identify t
 
 | Run | CWND | Elapsed | Loss-recovery signal | Finding |
 | --- | ---: | ---: | ---: | --- |
-| `DB/1GB/1GB_35170_12` | 12 | 45.11 s | 0 / 2248 | Formula prediction; already throughput-limited by TBF. |
-| `DB/1GB/1GB_43370_15` | 15 | 45.05 s | 0 / 1903 | Same throughput region. |
-| `DB/1GB/1GB_44342_30` | 30 | 44.98 s | 0 / 1249 | Still clean. |
-| `DB/1GB/1GB_47504_32` | 32 | 44.96 s | 1 / 1213 | Safe upper region. |
-| `DB/1GB/1GB_34780_33` | 33 | 44.96 s | 43 / 1276 | Borderline. |
-| `DB/1GB/1GB_40442_35` | 35 | 44.99 s | 1429 / 4124 | Clearly too high. |
+| `DB/1GB/phase1/1GB_35170_12` | 12 | 45.11 s | 0 / 2248 | Formula prediction; already throughput-limited by TBF. |
+| `DB/1GB/phase1/1GB_43370_15` | 15 | 45.05 s | 0 / 1903 | Same throughput region. |
+| `DB/1GB/phase1/1GB_44342_30` | 30 | 44.98 s | 0 / 1249 | Still clean. |
+| `DB/1GB/phase1/1GB_47504_32` | 32 | 44.96 s | 1 / 1213 | Safe upper region. |
+| `DB/1GB/phase1/1GB_34780_33` | 33 | 44.96 s | 43 / 1276 | Borderline. |
+| `DB/1GB/phase1/1GB_40442_35` | 35 | 44.99 s | 1429 / 4124 | Clearly too high. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_35170_12/cwnd_192_168_88_253_35170.png)
+![cwnd plot](DB/1GB/phase1/1GB_35170_12/cwnd_192_168_88_253_35170.png)
 
 Interpretation: if optimizing elapsed time only, CWND 12 is enough. If optimizing "largest clean CWND before repeated loss recovery", the useful empirical region is closer to 30-32.
 
@@ -227,17 +227,17 @@ The first assumption `R_arrival = 1000 Mbit/s` predicted CWND 57, but that was t
 
 | Run | CWND | Elapsed | Loss-recovery signal | Finding |
 | --- | ---: | ---: | ---: | --- |
-| `DB/1GB/1GB_41662_57` | 57 | 12.07 s | 1054 / 4565 | Predicted by the too-low arrival estimate; too lossy. |
-| `DB/1GB/1GB_47470_36` | 36 | 12.02 s | 184 / 3347 | Good candidate. |
-| `DB/1GB/1GB_49228_37` | 37 | 12.07 s | 431 / 3557 | More loss. |
-| `DB/1GB/1GB_39108_38` | 38 | 12.03 s | 199 / 3544 | Good candidate. |
-| `DB/1GB/1GB_49024_39` | 39 | 12.07 s | 404 / 3537 | More loss. |
-| `DB/1GB/1GB_55568_40` | 40 | 12.04 s | 494 / 3792 | More loss. |
-| `DB/1GB/1GB_34342_42` | 42 | 12.19 s | 339 / 3736 | Still plausible but slower. |
+| `DB/1GB/phase1/1GB_41662_57` | 57 | 12.07 s | 1054 / 4565 | Predicted by the too-low arrival estimate; too lossy. |
+| `DB/1GB/phase1/1GB_47470_36` | 36 | 12.02 s | 184 / 3347 | Good candidate. |
+| `DB/1GB/phase1/1GB_49228_37` | 37 | 12.07 s | 431 / 3557 | More loss. |
+| `DB/1GB/phase1/1GB_39108_38` | 38 | 12.03 s | 199 / 3544 | Good candidate. |
+| `DB/1GB/phase1/1GB_49024_39` | 39 | 12.07 s | 404 / 3537 | More loss. |
+| `DB/1GB/phase1/1GB_55568_40` | 40 | 12.04 s | 494 / 3792 | More loss. |
+| `DB/1GB/phase1/1GB_34342_42` | 42 | 12.19 s | 339 / 3736 | Still plausible but slower. |
 
 Representative plot:
 
-![cwnd plot](DB/1GB/1GB_47470_36/cwnd_192_168_88_253_47470.png)
+![cwnd plot](DB/1GB/phase1/1GB_47470_36/cwnd_192_168_88_253_47470.png)
 
 Reverse-estimating from CWND 36-42 gives `R_arrival ~= 1235-1420 Mbit/s`, not 1000 Mbit/s. This is why the revised final table uses an arrival range for this test.
 
@@ -247,15 +247,15 @@ With `R_arrival ~= 1420 Mbit/s`, the formula predicts CWND 18.
 
 | Run | CWND | Elapsed | Loss-recovery signal | Finding |
 | --- | ---: | ---: | ---: | --- |
-| `DB/1GB/1GB_47064_0` | 0 | 12.16 s | 3720 / 9924 | Reno-like baseline is lossy. |
-| `DB/1GB/1GB_55592_18` | 18 | 12.02 s | 34 / 3128 | Best clean candidate. |
-| `DB/1GB/1GB_42404_20` | 20 | 12.06 s | 1792 / 6341 | Too lossy. |
-| `DB/1GB/1GB_55324_22` | 22 | 12.12 s | 3623 / 10188 | Too lossy. |
-| `DB/1GB/1GB_32982_25` | 25 | 12.13 s | 3657 / 9990 | Too lossy. |
+| `DB/1GB/phase1/1GB_47064_0` | 0 | 12.16 s | 3720 / 9924 | Reno-like baseline is lossy. |
+| `DB/1GB/phase1/1GB_55592_18` | 18 | 12.02 s | 34 / 3128 | Best clean candidate. |
+| `DB/1GB/phase1/1GB_42404_20` | 20 | 12.06 s | 1792 / 6341 | Too lossy. |
+| `DB/1GB/phase1/1GB_55324_22` | 22 | 12.12 s | 3623 / 10188 | Too lossy. |
+| `DB/1GB/phase1/1GB_32982_25` | 25 | 12.13 s | 3657 / 9990 | Too lossy. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_55592_18/cwnd_192_168_88_253_55592.png)
+![cwnd plot](DB/1GB/phase1/1GB_55592_18/cwnd_192_168_88_253_55592.png)
 
 ### Test 4a: 750 Mbit/s, 12500 B Queue
 
@@ -263,12 +263,12 @@ The original note labels this calculation as `R_arrival = 1420 Mbit/s`, but the 
 
 | Run | CWND | Elapsed | Loss-recovery signal | Finding |
 | --- | ---: | ---: | ---: | --- |
-| `DB/1GB/1GB_38038_0` | 0 | 14.56 s | 6486 / 15521 | Reno-like baseline is slower and lossy. |
-| `DB/1GB/1GB_33854_12` | 12 | 12.05 s | 1357 / 5865 | Throughput is good, but loss is still substantial. |
+| `DB/1GB/phase1/1GB_38038_0` | 0 | 14.56 s | 6486 / 15521 | Reno-like baseline is slower and lossy. |
+| `DB/1GB/phase1/1GB_33854_12` | 12 | 12.05 s | 1357 / 5865 | Throughput is good, but loss is still substantial. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_33854_12/cwnd_192_168_88_253_33854.png)
+![cwnd plot](DB/1GB/phase1/1GB_33854_12/cwnd_192_168_88_253_33854.png)
 
 Interpretation: the throughput result supports CWND 12, but the loss signal says this test should be repeated with more CWND points around 8-12.
 
@@ -278,12 +278,12 @@ This was also labeled "Test 4" in the original notes. I keep it separate as Test
 
 | Run | CWND | Elapsed | Loss-recovery signal | Finding |
 | --- | ---: | ---: | ---: | --- |
-| `DB/1GB/1GB_44108_0` | 0 | 64.73 s | 17066 / 36726 | Reno-like baseline collapses. |
-| `DB/1GB/1GB_60834_5` | 5 | 21.78 s | 1 / 3694 | Clean but not fully TBF-rate-limited. |
+| `DB/1GB/phase1/1GB_44108_0` | 0 | 64.73 s | 17066 / 36726 | Reno-like baseline collapses. |
+| `DB/1GB/phase1/1GB_60834_5` | 5 | 21.78 s | 1 / 3694 | Clean but not fully TBF-rate-limited. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_60834_5/cwnd_192_168_88_253_60834.png)
+![cwnd plot](DB/1GB/phase1/1GB_60834_5/cwnd_192_168_88_253_60834.png)
 
 Interpretation: CWND 5 is clean and much better than Reno, but elapsed time is still above the ideal 750 Mbit/s transfer time. This is a good candidate for further local search around CWND 5-8.
 
@@ -291,36 +291,36 @@ Interpretation: CWND 5 is clean and much better than Reno, but elapsed time is s
 
 | Run | CWND | Elapsed | Loss-recovery signal | Finding |
 | --- | ---: | ---: | ---: | --- |
-| `DB/1GB/1GB_36664_0` | 0 | 18.02 s | 1345 / 5055 | Reno-like baseline is lossy. |
-| `DB/1GB/1GB_49068_33` | 33 | 18.04 s | 13 / 2279 | Formula prediction works. |
+| `DB/1GB/phase1/1GB_36664_0` | 0 | 18.02 s | 1345 / 5055 | Reno-like baseline is lossy. |
+| `DB/1GB/phase1/1GB_49068_33` | 33 | 18.04 s | 13 / 2279 | Formula prediction works. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_49068_33/cwnd_192_168_88_253_49068.png)
+![cwnd plot](DB/1GB/phase1/1GB_49068_33/cwnd_192_168_88_253_49068.png)
 
 ### Test 6: 500 Mbit/s, 25000 B Queue
 
 | Run | CWND | Elapsed | Loss-recovery signal | Finding |
 | --- | ---: | ---: | ---: | --- |
-| `DB/1GB/1GB_37850_0` | 0 | 18.06 s | 4455 / 11370 | Reno-like baseline is lossy. |
-| `DB/1GB/1GB_52256_16` | 16 | 18.05 s | 1 / 2864 | Formula prediction works. |
+| `DB/1GB/phase1/1GB_37850_0` | 0 | 18.06 s | 4455 / 11370 | Reno-like baseline is lossy. |
+| `DB/1GB/phase1/1GB_52256_16` | 16 | 18.05 s | 1 / 2864 | Formula prediction works. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_52256_16/cwnd_192_168_88_253_52256.png)
+![cwnd plot](DB/1GB/phase1/1GB_52256_16/cwnd_192_168_88_253_52256.png)
 
 ### Test 7: 500 Mbit/s, 12500 B Queue
 
 | Run | CWND | Elapsed | Loss-recovery signal | Finding |
 | --- | ---: | ---: | ---: | --- |
-| `DB/1GB/1GB_48698_0` | 0 | 18.68 s | 12118 / 26779 | Reno-like baseline is lossy. |
-| `DB/1GB/1GB_60200_7` | 7 | 18.08 s | 0 / 4132 | Formula prediction; clean. |
-| `DB/1GB/1GB_38296_8` | 8 | 18.13 s | 0 / 3595 | Also clean. |
-| `DB/1GB/1GB_43544_9` | 9 | 18.04 s | 5 / 3780 | Slightly faster, still mostly clean. |
+| `DB/1GB/phase1/1GB_48698_0` | 0 | 18.68 s | 12118 / 26779 | Reno-like baseline is lossy. |
+| `DB/1GB/phase1/1GB_60200_7` | 7 | 18.08 s | 0 / 4132 | Formula prediction; clean. |
+| `DB/1GB/phase1/1GB_38296_8` | 8 | 18.13 s | 0 / 3595 | Also clean. |
+| `DB/1GB/phase1/1GB_43544_9` | 9 | 18.04 s | 5 / 3780 | Slightly faster, still mostly clean. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_60200_7/cwnd_192_168_88_253_60200.png)
+![cwnd plot](DB/1GB/phase1/1GB_60200_7/cwnd_192_168_88_253_60200.png)
 
 Interpretation: the formula gives the conservative clean point. Empirically, CWND 7-9 all perform similarly.
 
@@ -328,14 +328,14 @@ Interpretation: the formula gives the conservative clean point. Empirically, CWN
 
 | Run | CWND | Elapsed | Loss-recovery signal | Finding |
 | --- | ---: | ---: | ---: | --- |
-| `DB/1GB/1GB_52064_0` | 0 | 44.57 s | 18447 / 39334 | Reno-like baseline collapses. |
-| `DB/1GB/1GB_34330_3` | 3 | 39.57 s | 1 / 3690 | Formula prediction, but too slow. |
-| `DB/1GB/1GB_54646_4` | 4 | 22.97 s | 1 / 3739 | Better but still slow. |
-| `DB/1GB/1GB_44654_7` | 7 | 18.29 s | 3 / 4061 | Empirical optimum among tested points. |
+| `DB/1GB/phase1/1GB_52064_0` | 0 | 44.57 s | 18447 / 39334 | Reno-like baseline collapses. |
+| `DB/1GB/phase1/1GB_34330_3` | 3 | 39.57 s | 1 / 3690 | Formula prediction, but too slow. |
+| `DB/1GB/phase1/1GB_54646_4` | 4 | 22.97 s | 1 / 3739 | Better but still slow. |
+| `DB/1GB/phase1/1GB_44654_7` | 7 | 18.29 s | 3 / 4061 | Empirical optimum among tested points. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_44654_7/cwnd_192_168_88_253_44654.png)
+![cwnd plot](DB/1GB/phase1/1GB_44654_7/cwnd_192_168_88_253_44654.png)
 
 Interpretation: this is a mismatch case. The reduced-BDP formula underpredicts the best empirical CWND. Either the short-window `R_arrival` estimate is too high for this small queue, or the model is too pessimistic when the TBF queue is extremely small.
 
@@ -343,13 +343,13 @@ Interpretation: this is a mismatch case. The reduced-BDP formula underpredicts t
 
 | Run | CWND | Elapsed | Loss-recovery signal | Finding |
 | --- | ---: | ---: | ---: | --- |
-| `DB/1GB/1GB_51330_0` | 0 | 36.02 s | 1421 / 4329 | Reno-like baseline is lossy. |
-| `DB/1GB/1GB_57344_33` | 33 | 36.00 s | 29 / 1401 | Empirical optimum. |
-| `DB/1GB/1GB_37848_33` | 33 | 36.00 s | 23 / 1384 | Confirmation run. |
+| `DB/1GB/phase1/1GB_51330_0` | 0 | 36.02 s | 1421 / 4329 | Reno-like baseline is lossy. |
+| `DB/1GB/phase1/1GB_57344_33` | 33 | 36.00 s | 29 / 1401 | Empirical optimum. |
+| `DB/1GB/phase1/1GB_37848_33` | 33 | 36.00 s | 23 / 1384 | Confirmation run. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_57344_33/cwnd_192_168_88_253_57344.png)
+![cwnd plot](DB/1GB/phase1/1GB_57344_33/cwnd_192_168_88_253_57344.png)
 
 Reverse-estimating from CWND 33 gives `R_arrival ~= 507 Mbit/s`.
 
@@ -357,25 +357,25 @@ Reverse-estimating from CWND 33 gives `R_arrival ~= 507 Mbit/s`.
 
 | Run | CWND | Elapsed | Loss-recovery signal | Finding |
 | --- | ---: | ---: | ---: | --- |
-| `DB/1GB/1GB_42518_0` | 0 | 36.07 s | 4823 / 11905 | Reno-like baseline is lossy. |
-| `DB/1GB/1GB_33412_16` | 16 | 36.01 s | 22 / 2226 | Formula value is 15.88, tested as 16. |
+| `DB/1GB/phase1/1GB_42518_0` | 0 | 36.07 s | 4823 / 11905 | Reno-like baseline is lossy. |
+| `DB/1GB/phase1/1GB_33412_16` | 16 | 36.01 s | 22 / 2226 | Formula value is 15.88, tested as 16. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_33412_16/cwnd_192_168_88_253_33412.png)
+![cwnd plot](DB/1GB/phase1/1GB_33412_16/cwnd_192_168_88_253_33412.png)
 
 ### Test 11: 250 Mbit/s, 12500 B Queue
 
 | Run | CWND | Elapsed | Loss-recovery signal | Finding |
 | --- | ---: | ---: | ---: | --- |
-| `DB/1GB/1GB_51184_0` | 0 | 36.03 s | 13737 / 30440 | Reno-like baseline is lossy. |
-| `DB/1GB/1GB_42770_7` | 7 | 36.08 s | 37 / 4616 | Formula prediction; clean. |
-| `DB/1GB/1GB_45006_8` | 8 | 35.96 s | 2 / 3774 | Also clean and slightly faster. |
-| `DB/1GB/1GB_51208_9` | 9 | 36.03 s | 8807 / 20828 | Too lossy. |
+| `DB/1GB/phase1/1GB_51184_0` | 0 | 36.03 s | 13737 / 30440 | Reno-like baseline is lossy. |
+| `DB/1GB/phase1/1GB_42770_7` | 7 | 36.08 s | 37 / 4616 | Formula prediction; clean. |
+| `DB/1GB/phase1/1GB_45006_8` | 8 | 35.96 s | 2 / 3774 | Also clean and slightly faster. |
+| `DB/1GB/phase1/1GB_51208_9` | 9 | 36.03 s | 8807 / 20828 | Too lossy. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_42770_7/cwnd_192_168_88_253_42770.png)
+![cwnd plot](DB/1GB/phase1/1GB_42770_7/cwnd_192_168_88_253_42770.png)
 
 Interpretation: CWND 7-8 is the useful empirical region; CWND 9 is too lossy.
 
@@ -383,14 +383,14 @@ Interpretation: CWND 7-8 is the useful empirical region; CWND 9 is too lossy.
 
 | Run | CWND | Elapsed | Loss-recovery signal | Finding |
 | --- | ---: | ---: | ---: | --- |
-| `DB/1GB/1GB_50774_0` | 0 | 37.68 s | 41135 / 84049 | Reno-like baseline is lossy. |
-| `DB/1GB/1GB_49192_3` | 3 | 39.34 s | 1 / 3667 | Formula prediction, but too slow. |
-| `DB/1GB/1GB_36250_5` | 5 | 36.29 s | 12 / 3803 | Empirical optimum among tested points. |
-| `DB/1GB/1GB_33640_6` | 6 | 36.44 s | 39685 / 81048 | Too lossy. |
+| `DB/1GB/phase1/1GB_50774_0` | 0 | 37.68 s | 41135 / 84049 | Reno-like baseline is lossy. |
+| `DB/1GB/phase1/1GB_49192_3` | 3 | 39.34 s | 1 / 3667 | Formula prediction, but too slow. |
+| `DB/1GB/phase1/1GB_36250_5` | 5 | 36.29 s | 12 / 3803 | Empirical optimum among tested points. |
+| `DB/1GB/phase1/1GB_33640_6` | 6 | 36.44 s | 39685 / 81048 | Too lossy. |
 
 Plot:
 
-![cwnd plot](DB/1GB/1GB_36250_5/cwnd_192_168_88_253_36250.png)
+![cwnd plot](DB/1GB/phase1/1GB_36250_5/cwnd_192_168_88_253_36250.png)
 
 Interpretation: like Test 8, the very small queue case is not well predicted by the reduced-BDP model.
 
@@ -427,3 +427,13 @@ Note that the case where R_tbf == 1000Mbit is not tested here as when R_tbf ~= R
 | Test 10 | 250 Mbit/s | 12500 B | 12850 B | 507 Mbit/s | 25000 B | 12150 B | 16 | 16 |
 | Test 11 | 250 Mbit/s | 12500 B | 12850 B | 507 Mbit/s | 12500 B | 0 B | 7 | 7-8 |
 | Test 12 | 250 Mbit/s | 12500 B | 12850 B | 507 Mbit/s | 6250 B | 0 B | 3 | 5 |
+
+
+
+
+
+250Mb queue_size 6250
+
+client_server/DB/1GB/phase1/1GB_36452_0
+client_server/DB/1GB/phase1/1GB_40138_6
+client_server/DB/1GB/phase1/1GB_47382_3 (slow start end not detected )

@@ -26,6 +26,7 @@ import csv
 import json
 import os
 import socket
+import struct
 import subprocess
 import sys
 import time
@@ -38,6 +39,11 @@ SO_MAX_PACING_RATE = getattr(socket, "SO_MAX_PACING_RATE", 47)
 DEFAULT_MAX_PACING_RATE_BYTES_PER_SEC = 125_000_000  # 1 Gbit/s
 ONE_GIB = (1024 ** 3) * 1 # 1 GiB for better testing of congestion control; adjust as needed
 CHUNK_SIZE = 1024 * 1024  # 1 MiB
+TCP_INFO = getattr(socket, "TCP_INFO", 11)
+TCP_INFO_STRUCT_SIZE = 192
+TCP_INFO_SND_SSTHRESH_OFFSET = 76
+TCP_INFO_SND_CWND_OFFSET = 80
+TCP_INFO_BYTES_ACKED_OFFSET = 120
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_EXTRACTOR_PATH = os.path.join(SCRIPT_DIR, "server_sub_process_1", "log_extractor.py")
 R_ARRIVAL_EXTRACTOR_PATH = os.path.join(
@@ -48,7 +54,128 @@ DEFAULT_R_ARRIVAL_FILE = os.path.join(
 )
 
 
-def send_from_file(conn, file_path, size):
+def mib_per_second(byte_count, elapsed):
+    return (byte_count / CHUNK_SIZE) / elapsed if elapsed > 0 else 0
+
+
+def read_tcp_info(conn):
+    try:
+        data = conn.getsockopt(socket.IPPROTO_TCP, TCP_INFO, TCP_INFO_STRUCT_SIZE)
+    except OSError:
+        return None
+
+    if len(data) < TCP_INFO_SND_CWND_OFFSET + 4:
+        return None
+
+    info = {
+        "snd_ssthresh": struct.unpack_from("=I", data, TCP_INFO_SND_SSTHRESH_OFFSET)[0],
+        "snd_cwnd": struct.unpack_from("=I", data, TCP_INFO_SND_CWND_OFFSET)[0],
+        "bytes_acked": None,
+    }
+
+    if len(data) >= TCP_INFO_BYTES_ACKED_OFFSET + 8:
+        info["bytes_acked"] = struct.unpack_from("=Q", data, TCP_INFO_BYTES_ACKED_OFFSET)[0]
+
+    return info
+
+
+def tcp_info_in_slow_start(tcp_info):
+    return tcp_info["snd_cwnd"] < tcp_info["snd_ssthresh"]
+
+
+def new_slow_start_tracker(conn):
+    return {
+        "conn": conn,
+        "seen_slow_start": False,
+        "last_in_slow_start": None,
+        "end_time": None,
+        "end_bytes_written": None,
+        "end_bytes_acked": None,
+        "end_snd_cwnd": None,
+        "end_snd_ssthresh": None,
+    }
+
+
+def update_slow_start_tracker(tracker, bytes_written):
+    if tracker is None or tracker["end_time"] is not None:
+        return
+
+    tcp_info = read_tcp_info(tracker["conn"])
+    if tcp_info is None:
+        return
+
+    in_slow_start = tcp_info_in_slow_start(tcp_info)
+    if in_slow_start:
+        tracker["seen_slow_start"] = True
+
+    if tracker["last_in_slow_start"] is None:
+        tracker["last_in_slow_start"] = in_slow_start
+        return
+
+    if tracker["seen_slow_start"] and tracker["last_in_slow_start"] and not in_slow_start:
+        tracker["end_time"] = time.time()
+        tracker["end_bytes_written"] = bytes_written
+        tracker["end_bytes_acked"] = tcp_info["bytes_acked"]
+        tracker["end_snd_cwnd"] = tcp_info["snd_cwnd"]
+        tracker["end_snd_ssthresh"] = tcp_info["snd_ssthresh"]
+
+    tracker["last_in_slow_start"] = in_slow_start
+
+
+def summarize_post_slow_start(tracker, total_bytes, start_time, end_time):
+    summary = {
+        "slow_start_end_time": None,
+        "slow_start_end_offset_seconds": None,
+        "slow_start_end_bytes_written": None,
+        "slow_start_end_bytes_acked": None,
+        "slow_start_end_snd_cwnd": None,
+        "slow_start_end_snd_ssthresh": None,
+        "post_slow_start_elapsed_seconds": None,
+        "post_slow_start_bytes": None,
+        "post_slow_start_byte_source": None,
+        "post_slow_start_mib_per_second": None,
+    }
+
+    if tracker is None or tracker["end_time"] is None:
+        return summary
+
+    elapsed = end_time - tracker["end_time"]
+    final_tcp_info = read_tcp_info(tracker["conn"])
+    byte_source = "bytes_written"
+    post_slow_start_bytes = total_bytes - tracker["end_bytes_written"]
+
+    if (
+        final_tcp_info is not None
+        and final_tcp_info["bytes_acked"] is not None
+        and tracker["end_bytes_acked"] is not None
+    ):
+        byte_source = "bytes_acked"
+        post_slow_start_bytes = final_tcp_info["bytes_acked"] - tracker["end_bytes_acked"]
+
+    post_slow_start_bytes = max(0, post_slow_start_bytes)
+
+    summary.update(
+        {
+            "slow_start_end_time": tracker["end_time"],
+            "slow_start_end_offset_seconds": tracker["end_time"] - start_time,
+            "slow_start_end_bytes_written": tracker["end_bytes_written"],
+            "slow_start_end_bytes_acked": tracker["end_bytes_acked"],
+            "slow_start_end_snd_cwnd": tracker["end_snd_cwnd"],
+            "slow_start_end_snd_ssthresh": tracker["end_snd_ssthresh"],
+            "post_slow_start_elapsed_seconds": elapsed,
+            "post_slow_start_bytes": post_slow_start_bytes,
+            "post_slow_start_byte_source": byte_source,
+            "post_slow_start_mib_per_second": mib_per_second(
+                post_slow_start_bytes,
+                elapsed,
+            ),
+        }
+    )
+
+    return summary
+
+
+def send_from_file(conn, file_path, size, slow_start_tracker=None):
     sent = 0
     with open(file_path, "rb") as f:
         while sent < size:
@@ -60,16 +187,18 @@ def send_from_file(conn, file_path, size):
                 continue
             conn.sendall(data)
             sent += len(data)
+            update_slow_start_tracker(slow_start_tracker, sent)
     return sent
 
 
-def send_generated(conn, size):
+def send_generated(conn, size, slow_start_tracker=None):
     sent = 0
     block = b"\0" * CHUNK_SIZE
     while sent < size:
         to_send = min(CHUNK_SIZE, size - sent)
         conn.sendall(block[:to_send])
         sent += to_send
+        update_slow_start_tracker(slow_start_tracker, sent)
     return sent
 
 
@@ -289,19 +418,36 @@ def main():
                             file=sys.stderr,
                         )
 
+                slow_start_tracker = new_slow_start_tracker(conn)
+                update_slow_start_tracker(slow_start_tracker, 0)
                 start = time.time()
                 if file_path:
-                    total = send_from_file(conn, file_path, args_size)
+                    total = send_from_file(conn, file_path, args_size, slow_start_tracker)
                 else:
-                    total = send_generated(conn, args_size)
+                    total = send_generated(conn, args_size, slow_start_tracker)
                 
                 # STOP COMMAND to inform the client to terminate the connection
                 send_end_signal(conn)
                 end = time.time()
                 elapsed = end - start
 
-                mbps = (total / (CHUNK_SIZE)) / elapsed if elapsed > 0 else 0
+                mbps = mib_per_second(total, elapsed)
                 print(f"Sent {total} bytes in {elapsed:.2f}s ({mbps:.2f} MiB/s)")
+                post_slow_start_summary = summarize_post_slow_start(
+                    slow_start_tracker,
+                    total,
+                    start,
+                    end,
+                )
+                if post_slow_start_summary["post_slow_start_mib_per_second"] is None:
+                    print("Slow start end was not detected during this transfer")
+                else:
+                    print(
+                        "After slow start: "
+                        f"{post_slow_start_summary['post_slow_start_mib_per_second']:.2f} MiB/s "
+                        f"over {post_slow_start_summary['post_slow_start_elapsed_seconds']:.2f}s "
+                        f"({post_slow_start_summary['post_slow_start_byte_source']})"
+                    )
 
                 r_arrival_summary = {
                     "average_r_arrival_mbit": None,
@@ -327,6 +473,7 @@ def main():
                         "size_gib": args.size,
                         "total_bytes": total,
                         "max_pacing_rate_bytes_per_second": args.max_pacing_rate,
+                        **post_slow_start_summary,
                         **r_arrival_summary,
                     }
                     os.makedirs(os.path.dirname(os.path.abspath(args.summary_file)), exist_ok=True)

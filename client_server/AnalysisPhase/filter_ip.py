@@ -39,12 +39,16 @@ RTT_PATTERN = re.compile(r"\brtt=(?P<rtt>\d+)\b")
 SSTHRESH_PATTERN = re.compile(r"\bssthresh=(?P<ssthresh>\d+)\b")
 CA_STATE_PATTERN = re.compile(r"\bca_state=(?P<ca_state>[a-zA-Z_]+)(?:\(\d+\))?\b")
 CA_PHASE_PATTERN = re.compile(r"\bphase=(?P<phase>[a-zA-Z_]+)(?:\(\d+\))?\b")
+BYTES_ACKED_PATTERN = re.compile(r"\bbytes_acked=(?P<bytes_acked>\d+)\b")
+BYTES_SENT_PATTERN = re.compile(r"\bbytes_sent=(?P<bytes_sent>\d+)\b")
 
 FIELDNAMES = [
     "line_number",
     "timestamp",
     "seq",
     "cwnd",
+    "bytes_acked",
+    "bytes_sent",
     "ip",
     "port",
     "rtt",
@@ -93,6 +97,8 @@ def parse_line(line_number: int, line: str):
         "timestamp": match.group("timestamp"),
         "seq": match.group("seq") or "",
         "cwnd": match.group("cwnd"),
+        "bytes_acked": optional_group(BYTES_ACKED_PATTERN, clean_line, "bytes_acked"),
+        "bytes_sent": optional_group(BYTES_SENT_PATTERN, clean_line, "bytes_sent"),
         "ip": match.group("ip"),
         "port": match.group("port"),
         "rtt": optional_group(RTT_PATTERN, clean_line, "rtt"),

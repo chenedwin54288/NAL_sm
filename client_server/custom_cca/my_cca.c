@@ -245,10 +245,12 @@ static void my_cca_pkts_acked(struct sock *sk, const struct ack_sample *sample)
 	__be32 dest_ip = inet->inet_daddr;
 	__be16 dest_port = inet->inet_dport;
 
-	pr_info("my_cca: seq=%lld cwnd=%u rtt=%d phase=%s Destination: %pI4:%d\n",
+	pr_info("my_cca: seq=%lld cwnd=%u rtt=%d bytes_acked=%llu bytes_sent=%llu phase=%s Destination: %pI4:%d\n",
 		seq_num,
 		cwnd,
 		sample->rtt_us,
+		(unsigned long long)tp->bytes_acked,
+		(unsigned long long)tp->bytes_sent,
 		phase,
 		&dest_ip,
 		ntohs(dest_port));
