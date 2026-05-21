@@ -175,7 +175,8 @@ Testing cwnd == 5 more times for better accuracy
 
 - client_server/DB/1GB/1GB_43198_6 (Drop rate: 0.016819, 56.37 MiB/s over 18.15s)
 - client_server/DB/1GB/1GB_41802_7 (Drop rate: 0.000502, 56.94 MiB/s over 17.97s)... OPTIMAL
-- client_server/DB/1GB/1GB_47016_8 (Drop rate: 0.263779, 56.86 MiB/s over 17.99s )
+- client_server/DB/1GB/1GB_47016_8 (Drop rate: 0.263779, 56.86 MiB/s over 17.99s)
+- client_server/DB/1GB/1GB_47358_9 (Drop rate: 0.440519, 56.76 MiB/s over 18.02s)
 
 ### BDP + Queue_effective - MSS
 - cwnd: 2 (`python3 calculation.py --rate-mbit 500 --r-arrival-mbit 1058.2 --rtt-ms 0.4 --tbf-limit 6250b --json`)
@@ -455,79 +456,136 @@ Testing cwnd == 9 more times for better accuracy
 ## Q_config = 6250 bytes
 ### TCP Reno
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 0
-
+- client_server/DB/1GB/1GB_53158_0 (Drop rate: 0.465010, 16.38 MiB/s over 62.46s)
+  
 ### Empirical optimal cwnd (maximum throughput)
+- client_server/DB/1GB/1GB_40416_8 (Drop rate: 0.000274, 74.80 MiB/s over 13.68s)
+
+Taking more samples
+- client_server/DB/1GB/1GB_50464_9 (Drop rate: 0.000295, 80.66 MiB/s over 12.68s) 
+- client_server/DB/1GB/1GB_53024_9 (Drop rate: 0.000294, 81.68 MiB/s over 12.52s)
+- client_server/DB/1GB/1GB_47860_9 (Drop rate: 0.000299, 80.40 MiB/s over 12.72s)
+  
+- client_server/DB/1GB/1GB_58008_10 (Drop rate: 0.464480, 11.44 MiB/s over 89.40s)
 
 ### BDP + Queue_effective - MSS
+- cwnd: 8 (`python3 calculation.py --rate-mbit 1000 --r-arrival-mbit 1463.4 --rtt-ms 0.4 --tbf-limit 6250b --json`)
+- client_server/DB/1GB/1GB_40416_8 (Drop rate: 0.000274, 74.80 MiB/s over 13.68s)
 
 ### BDP + Queue_size - MSS
 - cwnd: 37 (`python3 calculation.py --rate-mbit 1000 --rtt-ms 0.4 --tbf-limit 6250b --json`)
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 37
+- client_server/DB/1GB/1GB_35476_37 (Drop rate: 0.462948, 16.34 MiB/s over 62.60s)
 
 ### BDP
 - cwnd: 34 (`floor(BDP / MSS)`, BDP = 50000 bytes)
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 6250b --cwnd 34
+- client_server/DB/1GB/1GB_57946_34 (Drop rate: 0.464038, 15.03 MiB/s over 68.07s)
 
 ## Q_config = 12500 bytes
 ### TCP Reno
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 0
-
+- client_server/DB/1GB/1GB_45216_0 (Drop rate: 0.397025, 67.15 MiB/s over 15.24s)
+  
 ### Empirical optimal cwnd (maximum throughput)
+- client_server/DB/1GB/1GB_40760_16 (11.35s (90.24 MiB/s), only SLOWSTART)
+  
+Taking more samples for cwnd == 17
+- client_server/DB/1GB/1GB_53560_17 (9.40s (108.92 MiB/s), only SLOWSTART)... OPTIMAL
+- client_server/DB/1GB/1GB_38928_17 (9.50s (107.74 MiB/s), only SLOWSTART)
+- client_server/DB/1GB/1GB_48178_17 (9.53s (107.42 MiB/s), only SLOWSTART) 
+
+- client_server/DB/1GB/1GB_33978_18 (Drop rate: 0.295819, 77.28 MiB/s over 13.24s)
 
 ### BDP + Queue_effective - MSS
-
+- cwnd: 17 (`python3 calculation.py --rate-mbit 1000 --r-arrival-mbit 1463.4 --rtt-ms 0.4 --tbf-limit 12500b --json`)
+- client_server/DB/1GB/1GB_53560_17 (9.40s (108.92 MiB/s), only SLOWSTART)
+  
 ### BDP + Queue_size - MSS
 - cwnd: 41 (`python3 calculation.py --rate-mbit 1000 --rtt-ms 0.4 --tbf-limit 12500b --json`)
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 41
+- client_server/DB/1GB/1GB_52892_41 (Drop rate: 0.402268, 57.49 MiB/s over 17.80s)
 
 ### BDP
 - cwnd: 34 (`floor(BDP / MSS)`, BDP = 50000 bytes)
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 12500b --cwnd 34
+- client_server/DB/1GB/1GB_40704_34 (Drop rate: 0.400145, 53.46 MiB/s over 19.13s)
 
 ## Q_config = 25000 bytes
 ### TCP Reno
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 0
-
+- client_server/DB/1GB/1GB_54296_0 (Drop rate: 0.248795, 98.87 MiB/s over 10.35s)
+  
 ### Empirical optimal cwnd (maximum throughput)
+- client_server/DB/1GB/1GB_50452_32 (Drop rate: 0.000345, 112.08 MiB/s over 9.13s)
+- client_server/DB/1GB/1GB_59422_33 (9.16s (111.79 MiB/s) only SLOWSTART)... 32~34 OPTIMAL
+- client_server/DB/1GB/1GB_33796_35 (Drop rate: 0.126055, 82.05 MiB/s over 12.47s)
 
 ### BDP + Queue_effective - MSS
+- Since the 1010Mbit we obtained from 100000b queue_size did not work, we will recalculate it here
+- Estimated R_arrival is **1463.4 Mbit** (`python3 calculation.py --rate-mbit 1000  --rtt-ms 0.4  --tbf-limit 25000b --optimal-cwnd 34  --json`)
 
 ### BDP + Queue_size - MSS
 - cwnd: 50 (`python3 calculation.py --rate-mbit 1000 --rtt-ms 0.4 --tbf-limit 25000b --json`)
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 50
-
+- client_server/DB/1GB/1GB_39790_50 (Drop rate: 0.229259, 105.72 MiB/s over 9.68s)
+  
 ### BDP
 - cwnd: 34 (`floor(BDP / MSS)`, BDP = 50000 bytes)
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 25000b --cwnd 34
-
+- client_server/DB/1GB/1GB_42658_34 (Drop rate: 0.147090, 95.28 MiB/s over 10.74s)
+  
 ## Q_config = 50000 bytes
 ### TCP Reno
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 0
-
+- client_server/DB/1GB/1GB_44360_0 (Drop rate: 0.003212, 111.87 MiB/s over 9.14s)
+  
 ### Empirical optimal cwnd (maximum throughput)
+- client_server/DB/1GB/1GB_56430_66 (Drop rate: 0.000767, 111.71 MiB/s over 9.16s)
+- client_server/DB/1GB/1GB_57156_67 (Drop rate: 0.001386, 112.08 MiB/s over 9.13s)...OPTIMAL
+- client_server/DB/1GB/1GB_35436_68 (Drop rate: 0.001379, 112.00 MiB/s over 9.12s)
 
 ### BDP + Queue_effective - MSS
+- cwnd: 67 (`python3 calculation.py --rate-mbit 1000 --r-arrival-mbit 1010.8 --rtt-ms 0.4 --tbf-limit 50000b --json`)
 
 ### BDP + Queue_size - MSS
 - cwnd: 67 (`python3 calculation.py --rate-mbit 1000 --rtt-ms 0.4 --tbf-limit 50000b --json`)
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 67
+- client_server/DB/1GB/1GB_57156_67 (Drop rate: 0.001386, 112.08 MiB/s over 9.13s)
 
 ### BDP
 - cwnd: 34 (`floor(BDP / MSS)`, BDP = 50000 bytes)
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 50000b --cwnd 34
+- client_server/DB/1GB/1GB_34096_34 (9.16s (111.75 MiB/s), only SLOWSTART)
 
 ## Q_config = 100000 bytes
 ### TCP Reno
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 0
+- client_server/DB/1GB/1GB_41298_0 (Drop rate: 0.000000, 111.40 MiB/s over 9.17s)
 
 ### Empirical optimal cwnd (maximum throughput)
-
+- client_server/DB/1GB/1GB_47422_102 (Drop rate: 0.000348, 111.98 MiB/s over 9.12s)... OPTIMAL 101 or 102
+- client_server/DB/1GB/1GB_60986_103 (Drop rate: 0.000000, 112.11 MiB/s over 9.12s)
+- client_server/DB/1GB/1GB_55214_105 (Drop rate: 0.000000, 112.13 MiB/s over 9.11s)
+- client_server/DB/1GB/1GB_56564_110 (Drop rate: 0.000000, 111.94 MiB/s over 9.13s)
+- client_server/DB/1GB/1GB_37612_115 (Drop rate: 0.000000, 112.14 MiB/s over 3.94s (SLOWSTART 1497/2712))
+- client_server/DB/1GB/1GB_52694_120 (Drop rate: 0.000000, 111.67 MiB/s over 9.03s)
+- client_server/DB/1GB/1GB_36534_125 (Drop rate: 0.000000, 108.95 MiB/s over 7.39s (SLOWSTART 574/2663))
+- client_server/DB/1GB/1GB_44074_130 (Drop rate: 0.000000, 111.48 MiB/s over 9.17s)
+- client_server/DB/1GB/1GB_58472_135 (Drop rate: 0.000000, 111.81 MiB/s over 8.40s)
+- client_server/DB/1GB/1GB_49092_140 (Drop rate: 0.000000, 112.16 MiB/s over 7.94s (SLOWSTART 353/2770))
+- client_server/DB/1GB/1GB_41380_145 (Drop rate: 0.000000, 111.65 MiB/s over 6.38s (SLOWSTART 805/2675))
+- client_server/DB/1GB/1GB_44942_150 (Drop rate: 0.000000, 112.03 MiB/s over 9.11s)
+  
 ### BDP + Queue_effective - MSS
+- cwnd: 101 (`python3 calculation.py --rate-mbit 1000  --rtt-ms 0.4  --tbf-limit 100000b --optimal-cwnd 101  --json`)
 
 ### BDP + Queue_size - MSS
 - cwnd: 101 (`python3 calculation.py --rate-mbit 1000 --rtt-ms 0.4 --tbf-limit 100000b --json`)
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 101
+- client_server/DB/1GB/1GB_42440_101 (Drop rate: 0.000000, 111.67 MiB/s over 8.47s)
 
 ### BDP
 - cwnd: 34 (`floor(BDP / MSS)`, BDP = 50000 bytes)
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 34
+- client_server/DB/1GB/1GB_44554_34 (9.27s (110.51 MiB/s), only SLOWSTART)

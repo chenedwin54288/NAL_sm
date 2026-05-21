@@ -175,10 +175,16 @@ summary = read_json(summary_path)
 ip_info = read_json(ip_info_path)
 
 row_count = ip_info.get("row_count")
-loss_recovery = ip_info.get("phase_counts", {}).get("loss_recovery")
+phase_counts = ip_info.get("phase_counts", {})
+loss_recovery = phase_counts.get("loss_recovery")
+fast_retransmit = phase_counts.get("fast_retransmit")
 drop_rate = None
+drop_rate_with_fast_retransmit = None
 if row_count:
     drop_rate = (loss_recovery or 0) / row_count
+    drop_rate_with_fast_retransmit = (
+        (loss_recovery or 0) + (fast_retransmit or 0)
+    ) / row_count
 
 post_mib = summary.get("post_slow_start_mib_per_second")
 post_mbit = summary.get("post_slow_start_mbit_per_second")
@@ -197,6 +203,20 @@ if server_log_path.exists():
 print(f"Drop rate: {fmt_float(drop_rate)}", end="")
 if row_count:
     print(f" ({loss_recovery or 0}/{row_count} loss_recovery rows)")
+else:
+    print(" (N/A)")
+print(
+    "Drop rate incl. fast retransmit: "
+    f"{fmt_float(drop_rate_with_fast_retransmit)}",
+    end="",
+)
+if row_count:
+    print(
+        " ("
+        f"{(loss_recovery or 0) + (fast_retransmit or 0)}/{row_count} "
+        f"loss_recovery + fast_retransmit rows"
+        ")"
+    )
 else:
     print(" (N/A)")
 print(f"post_slow_start_mbit_per_second: {fmt_float(post_mbit)}")
