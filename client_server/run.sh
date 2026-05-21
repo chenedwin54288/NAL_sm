@@ -16,6 +16,18 @@
 # Stop immediately on errors, unset variables, and failed pipeline commands.
 set -euo pipefail
 
+# Keep a copy of the terminal mode so background tools cannot leave the shell
+# with broken newline/cursor behavior after this script exits.
+ORIGINAL_STTY="$(stty -g 2>/dev/null || true)"
+restore_tty() {
+  if [[ -n "${ORIGINAL_STTY:-}" ]]; then
+    stty "$ORIGINAL_STTY" 2>/dev/null || true
+  fi
+}
+trap restore_tty EXIT
+trap 'restore_tty; exit 130' INT
+trap 'restore_tty; exit 143' TERM
+
 # Resolve all project paths relative to this script, so it can be run from any directory.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVER_PATH="$SCRIPT_DIR/Server/server.py"
