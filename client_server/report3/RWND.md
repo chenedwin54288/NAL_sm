@@ -165,3 +165,6 @@ if (!tcp_is_cwnd_limited(sk))
 - ./run.sh --cca my_cca --size-gib 1 --rtt-ms 0.4 --rate-mbit 1000 --tbf-rate 1000Mbit --tbf-burst 50000b --tbf-limit 100000b --cwnd 0
 - python3 client/client.py --rwnd-segments 102
   - client_server/DB/1GB/1GB_49368_0 (Drop rate: 0.000000, Drop rate incl. fast retransmit: 0.002867, 111.70 MiB/s over 9.14s)
+
+
+These results suggest that advertising a capped `rwnd` from the client, using the empirical `cwnd` value, constrains the sender’s effective sending window to `min(cwnd, rwnd)`. As a result, this approach achieves behavior similar to directly capping the sender-side `cwnd`.
