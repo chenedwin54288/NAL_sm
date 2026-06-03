@@ -1,0 +1,17 @@
+{
+  "csv_file": "/home/nal/NAL_edwin_sm/client_server/DB/1GB/1GB_53244_0/filtered_context.csv",
+  "row_count": 3154,
+  "phase_counts": {
+    "slow_start": 1,
+    "loss_recovery": 220,
+    "congestion_avoidance": 2826,
+    "fast_retransmit": 107
+  },
+  "average_rtt": 702.1027266962587,
+  "average_rtt_sample_count": 3154,
+  "first_timestamp": 429209.840351,
+  "last_timestamp": 429218.986846,
+  "min_timestamp": 429209.840351,
+  "max_timestamp": 429218.986846,
+  "transfer_time_seconds": 9.146494999993593
+}

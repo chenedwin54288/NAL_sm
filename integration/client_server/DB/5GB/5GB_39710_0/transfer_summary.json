@@ -1,0 +1,11 @@
+{
+  "cca": "my_cca",
+  "client_ip": "192.168.88.253",
+  "client_port": 39710,
+  "elapsed_seconds": 45.995413303375244,
+  "mib_per_second": 111.31544717795336,
+  "server_host": "0.0.0.0",
+  "server_port": 9000,
+  "size_gib": 5,
+  "total_bytes": 5368709120
+}

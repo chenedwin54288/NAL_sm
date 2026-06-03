@@ -1,0 +1,6 @@
+Generating 1073741824 GB of zeros
+Started log extractor with PID 31632
+Listening on 0.0.0.0:9000 ...
+Client connected from ('192.168.88.253', 41714)
+Sent 1073741824 bytes in 17.94s (57.07 MiB/s)
+Stopped log extractor

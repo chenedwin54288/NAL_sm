@@ -1,0 +1,1 @@
+cmd_/home/nal/NAL_edwin_sm/client_server/custom_cca/my_cca.ko := ld -r -m elf_x86_64 -z noexecstack --build-id=sha1  -T scripts/module.lds -o /home/nal/NAL_edwin_sm/client_server/custom_cca/my_cca.ko /home/nal/NAL_edwin_sm/client_server/custom_cca/my_cca.o /home/nal/NAL_edwin_sm/client_server/custom_cca/my_cca.mod.o;  true
