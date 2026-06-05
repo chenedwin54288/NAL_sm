@@ -112,6 +112,9 @@ def update_slow_start_tracker(tracker, bytes_written):
         tracker["last_in_slow_start"] = in_slow_start
         return
 
+    # previous sample: slow_start
+    # current sample: not slow_start
+    # at thie moment we write down the INFO
     if tracker["seen_slow_start"] and tracker["last_in_slow_start"] and not in_slow_start:
         tracker["end_time"] = time.time()
         tracker["end_bytes_written"] = bytes_written

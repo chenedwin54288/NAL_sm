@@ -1,2 +1,2 @@
-/home/nal/NAL_edwin_sm/client_server/custom_cca/my_cca.o
+/home/nal/NAL_edwin_sm/integration/client_server/custom_cca/my_cca.o
 

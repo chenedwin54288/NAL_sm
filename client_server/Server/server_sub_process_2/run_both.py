@@ -4,7 +4,7 @@ import subprocess
 import sys
 import time
 
-def run_scripts():
+def run_scripts(client_ip):
 
     # clean up any existing log files
     files_to_clear = ['backlog.txt', 'cwnd_log.txt']
@@ -18,7 +18,7 @@ def run_scripts():
         print("Started track_backlog.sh (PID: {})".format(backlog_proc.pid))
 
         # Start track_cwnd.sh in background
-        cwnd_proc = subprocess.Popen(['./track_cwnd.sh'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        cwnd_proc = subprocess.Popen(['./track_cwnd.sh', client_ip], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("Started track_cwnd.sh (PID: {})".format(cwnd_proc.pid))
 
         print("Both scripts are running. Press Ctrl+C to stop.")
@@ -35,7 +35,7 @@ def run_scripts():
         backlog_proc.wait()
         cwnd_proc.wait()
         print("Scripts stopped.")
-        
+
     except FileNotFoundError as e:
         print(f"Error: {e}. Make sure the scripts exist and are executable.")
         sys.exit(1)

@@ -4,6 +4,8 @@ import argparse
 import socket
 import time
 
+# Run with:
+# python3 client/client.py --rwnd-segments 32
 
 CHUNK_SIZE = 1024 * 1024  # 1 MiB
 STOP_COMMAND = b"STOP\n"

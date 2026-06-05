@@ -1,1 +1,1 @@
-cmd_/home/nal/NAL_edwin_sm/client_server/custom_cca/my_cca.mod := { echo  /home/nal/NAL_edwin_sm/client_server/custom_cca/my_cca.o;  echo; } > /home/nal/NAL_edwin_sm/client_server/custom_cca/my_cca.mod
+cmd_/home/nal/NAL_edwin_sm/integration/client_server/custom_cca/my_cca.mod := { echo  /home/nal/NAL_edwin_sm/integration/client_server/custom_cca/my_cca.o;  echo; } > /home/nal/NAL_edwin_sm/integration/client_server/custom_cca/my_cca.mod
