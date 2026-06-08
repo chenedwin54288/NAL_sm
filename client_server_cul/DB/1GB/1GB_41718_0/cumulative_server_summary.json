@@ -1,0 +1,17 @@
+{
+  "client_ip": "192.168.88.253",
+  "client_port": 46860,
+  "server_host": "0.0.0.0",
+  "server_port": 9001,
+  "target_rate_mbit_per_second": 1073.741824,
+  "target_rate_bytes_per_second": 134217728.0,
+  "target_duration_seconds": 1.2,
+  "target_bytes": 161061274,
+  "send_mode": "paced",
+  "sent_bytes": 161061274,
+  "elapsed_seconds": 3.879062921012519,
+  "actual_rate_mbit_per_second": 332.1653240065712,
+  "start_timestamp": 1780872569.8279908,
+  "end_timestamp": 1780872573.7077603,
+  "chunk_size": 1048576
+}

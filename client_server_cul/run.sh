@@ -71,9 +71,10 @@ SERVER_HOST="0.0.0.0"
 SERVER_PORT="9000"
 CUMULATIVE_ENABLED="1"
 CUMULATIVE_PORT="9001"
-CUMULATIVE_RATE="1Gib"
+CUMULATIVE_RATE=""
 CUMULATIVE_DURATION="1.2"
-CUMULATIVE_CHUNK_SIZE="16KiB"
+CUMULATIVE_CHUNK_SIZE=""
+CUMULATIVE_SEND_MODE=""
 LOG_INTERVAL="0.5"
 MSS_BYTES="1460"
 RTT_MS=""
@@ -103,9 +104,10 @@ Options:
   --log-interval SECONDS  Kernel log extraction interval (default: 0.5)
 
   --cumulative-port N         Cumulative probe server port (default: 9001)
-  --cumulative-rate RATE      Cumulative probe send rate (default: 1Gib)
-  --cumulative-duration SEC   Cumulative probe duration (default: 1.2)
-  --cumulative-chunk-size N   Cumulative probe send chunk size (default: 16KiB)
+  --cumulative-rate RATE      Override cumulative probe send rate
+  --cumulative-duration SEC   Override cumulative probe duration
+  --cumulative-chunk-size N   Override cumulative probe send chunk size
+  --cumulative-send-mode M    Cumulative probe send mode: paced or bulk
   --no-cumulative             Do not start the cumulative probe server
 
   --cwnd N                Use this CWND limit directly for my_cca; 0 disables the cap
@@ -284,6 +286,8 @@ while [[ $# -gt 0 ]]; do
       CUMULATIVE_DURATION="${2:-}"; shift 2 ;;
     --cumulative-chunk-size)
       CUMULATIVE_CHUNK_SIZE="${2:-}"; shift 2 ;;
+    --cumulative-send-mode)
+      CUMULATIVE_SEND_MODE="${2:-}"; shift 2 ;;
     --no-cumulative)
       CUMULATIVE_ENABLED="0"; shift ;;
     --dev)
@@ -445,11 +449,21 @@ if [[ "$CUMULATIVE_ENABLED" == "1" ]]; then
     python3 -u "$CUMULATIVE_SERVER_PATH"
     --host "$SERVER_HOST"
     --port "$CUMULATIVE_PORT"
-    --rate "$CUMULATIVE_RATE"
-    --duration "$CUMULATIVE_DURATION"
-    --chunk-size "$CUMULATIVE_CHUNK_SIZE"
     --summary-file "$TMP_CUMULATIVE_SUMMARY"
   )
+
+  if [[ -n "$CUMULATIVE_RATE" ]]; then
+    CUMULATIVE_CMD+=(--rate "$CUMULATIVE_RATE")
+  fi
+  if [[ -n "$CUMULATIVE_DURATION" ]]; then
+    CUMULATIVE_CMD+=(--duration "$CUMULATIVE_DURATION")
+  fi
+  if [[ -n "$CUMULATIVE_CHUNK_SIZE" ]]; then
+    CUMULATIVE_CMD+=(--chunk-size "$CUMULATIVE_CHUNK_SIZE")
+  fi
+  if [[ -n "$CUMULATIVE_SEND_MODE" ]]; then
+    CUMULATIVE_CMD+=(--send-mode "$CUMULATIVE_SEND_MODE")
+  fi
 
   log "Starting cumulative probe server on $SERVER_HOST:$CUMULATIVE_PORT"
   "${CUMULATIVE_CMD[@]}" >"$TMP_CUMULATIVE_LOG" 2>&1 &

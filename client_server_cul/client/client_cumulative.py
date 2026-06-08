@@ -12,7 +12,7 @@ import time
 STOP_COMMAND = b"CUMULATIVE_STOP\n"
 DEFAULT_HOST = "192.168.88.254"
 DEFAULT_PORT = 9001
-DEFAULT_CHUNK_SIZE = 64 * 1024
+DEFAULT_CHUNK_SIZE = 64 * 1024 #determines the recv() buffer size, when big => less sampling
 DEFAULT_MSS_BYTES = 1460
 DEFAULT_RTT_MS = 400.0
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))

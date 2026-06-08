@@ -12,8 +12,9 @@ STOP_COMMAND = b"CUMULATIVE_STOP\n"
 DEFAULT_HOST = "192.168.88.254"
 DEFAULT_PORT = 9001
 DEFAULT_RATE = "1Gib"
-DEFAULT_DURATION_SECONDS = 1.2
-DEFAULT_CHUNK_SIZE = 16 * 1024
+DEFAULT_DURATION_SECONDS = 10.0
+DEFAULT_CHUNK_SIZE = 1024 * 1024
+DEFAULT_SEND_MODE = "paced"
 SO_MAX_PACING_RATE = getattr(socket, "SO_MAX_PACING_RATE", 47)
 
 
@@ -131,6 +132,19 @@ def send_paced(conn, total_bytes, rate_bytes_per_second, chunk_size):
     return sent, time.monotonic() - start
 
 
+def send_bulk(conn, total_bytes, chunk_size):
+    sent = 0
+    block = b"\0" * chunk_size
+    start = time.monotonic()
+
+    while sent < total_bytes:
+        to_send = min(chunk_size, total_bytes - sent)
+        conn.sendall(block[:to_send])
+        sent += to_send
+
+    return sent, time.monotonic() - start
+
+
 def write_summary(path, summary):
     if path is None:
         return
@@ -170,15 +184,29 @@ def parse_args():
         type=float,
         default=DEFAULT_DURATION_SECONDS,
         help=(
-            "Probe duration in seconds "
-            f"(default: {DEFAULT_DURATION_SECONDS}, intended as 3 RTTs)"
+            "Probe duration in seconds. In paced mode this is the intended "
+            "wall-clock duration; in bulk mode it is used with --rate to "
+            "derive the byte budget. "
+            f"(default: {DEFAULT_DURATION_SECONDS})"
+        ),
+    )
+    parser.add_argument(
+        "--send-mode",
+        choices=("paced", "bulk"),
+        default=DEFAULT_SEND_MODE,
+        help=(
+            "paced sleeps between writes to match --rate; bulk sends like "
+            f"Server/server.py with no application sleep (default: {DEFAULT_SEND_MODE})"
         ),
     )
     parser.add_argument(
         "--chunk-size",
         type=parse_bytes,
         default=DEFAULT_CHUNK_SIZE,
-        help="Application send chunk size, for example 16KiB (default: 16KiB)",
+        help=(
+            "Application send chunk size, for example 16KiB "
+            f"(default: {DEFAULT_CHUNK_SIZE} bytes)"
+        ),
     )
     parser.add_argument(
         "--summary-file",
@@ -212,7 +240,8 @@ def main():
     print(
         "Cumulative probe target: "
         f"{total_bytes} bytes at {args.rate / 1_000_000:.3f} Mbit/s "
-        f"for {args.duration:.6g}s"
+        f"for {args.duration:.6g}s "
+        f"(send_mode={args.send_mode})"
     )
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_sock:
@@ -233,12 +262,19 @@ def main():
                     )
 
             start_wall = time.time()
-            sent, elapsed = send_paced(
-                conn=conn,
-                total_bytes=total_bytes,
-                rate_bytes_per_second=rate_bytes_per_second,
-                chunk_size=args.chunk_size,
-            )
+            if args.send_mode == "paced":
+                sent, elapsed = send_paced(
+                    conn=conn,
+                    total_bytes=total_bytes,
+                    rate_bytes_per_second=rate_bytes_per_second,
+                    chunk_size=args.chunk_size,
+                )
+            else:
+                sent, elapsed = send_bulk(
+                    conn=conn,
+                    total_bytes=total_bytes,
+                    chunk_size=args.chunk_size,
+                )
             conn.sendall(STOP_COMMAND)
             end_wall = time.time()
 
@@ -256,6 +292,7 @@ def main():
             "target_rate_bytes_per_second": rate_bytes_per_second,
             "target_duration_seconds": args.duration,
             "target_bytes": total_bytes,
+            "send_mode": args.send_mode,
             "sent_bytes": sent,
             "elapsed_seconds": elapsed,
             "actual_rate_mbit_per_second": actual_rate_mbit,
