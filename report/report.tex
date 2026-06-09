@@ -215,7 +215,7 @@ and for queue-sizes from 25000 we are using loss rate of 0.05)
 
 \subsection{different burst sizes}
 
-
+Take a look at "client_server/report4"
 
 From the experiments above, we have seen that the assumtoion holds, where when the queue_size is small, epirical
 cwnd indeed achieved a better throughput. However, in all cases algorithm1 were always overestikamting the cwnd size
@@ -236,7 +236,16 @@ Q_effective - how many bytes can the queue still accumulate [11:42]Rather the pr
 
 - the current setup allows the sender to send set amoutn of data in BULK and "as fast as possible capped in 1Gib"
 meaning that the enquesing rate is generally faster than the token generation rate
-- Taking this into account, 
+- Taking this into account, we proposed a more suitable algroithm that could be used under our current setup
+BDP = R_tbf * RTT_base
+
+Q_tbf = burst_penalty
+      = max(0, (R_arrival - R_tbf) * RTT_base)
+      = BDP * max(0, R_arrival / R_tbf - 1)
+
+if Q_tbf <= Q_config:
+    Q_effective = Q_config - Q_tbf
+    cwnd = floor((BDP + Q_effective - MSS) / MSS)
 
 
 \subsection{burst size 50000 to test the penality apparoach}
@@ -249,8 +258,7 @@ meaning that the enquesing rate is generally faster than the token generation ra
 \subsection{clamping rwnd from the client side}
 => now we know the empirical rate, since we want to establish this cwnd capped on the server side
 from the TCP handshake phase, we disabled the cwnd cap on the server side to test whether 
-we could still achive the empirical throughput 
-
+we could still achive the empirical throughput . Take a look at "client_server/report3"
 
 
 \section{Experiment 2: Estimation of the rwnd from the client side}
@@ -258,6 +266,8 @@ Since we know that it is possible to limit the cwnd by setting the rwnd from the
 we would also like to see whether it is possible for us to estimate this rwnd from the
 client side (before we were testing the throughput from the server side and manually
 trying to find out the empirical value)
+
+
 
 \subsection{Using WeHe as a replay server again}
 With the Base Setup, it is now possible for us to extract the correct cwnd
@@ -271,8 +281,7 @@ Can estimate the BDP when we have balanced queue size && burst, however
 only BDP, e cannot estimate the empirical rwnd because the r_arrival rate
 is not taken into account
 => the setup: 1,2ms (so 3RTTS) of replays where the server sends as fast as possible capped
-at 1Gib
-
+at 1Gib. take a look at "client_server_cul"
 
 
 
