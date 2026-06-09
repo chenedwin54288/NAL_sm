@@ -1,0 +1,6 @@
+
+==> Resetting TBF on eno1
+
+==> Applying TBF: rate=250Mbit burst=5840b limit=6250b
+sudo: a terminal is required to read the password; either use the -S option to read from standard input or configure an askpass helper
+sudo: a password is required

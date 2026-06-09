@@ -1,0 +1,28 @@
+{
+  "csv_file": "/home/nal/NAL_edwin_sm/client_server/DB/1GB/1GB_50612_34/filtered_context.csv",
+  "row_count": 2738,
+  "phase_counts": {
+    "slow_start": 2738
+  },
+  "average_rtt": 345.6219868517166,
+  "average_rtt_sample_count": 2738,
+  "first_timestamp": 339979.370666,
+  "last_timestamp": 339988.545436,
+  "min_timestamp": 339979.370666,
+  "max_timestamp": 339988.545436,
+  "transfer_time_seconds": 9.174769999983255,
+  "post_slow_start_byte_source": "bytes_acked",
+  "slow_start_end_timestamp": null,
+  "slow_start_end_phase": null,
+  "slow_start_end_seq": null,
+  "slow_start_end_cwnd": null,
+  "slow_start_end_bytes_acked": null,
+  "slow_start_end_bytes_sent": null,
+  "final_timestamp": null,
+  "final_bytes_acked": null,
+  "final_bytes_sent": null,
+  "post_slow_start_elapsed_seconds": null,
+  "post_slow_start_bytes": null,
+  "post_slow_start_mbit_per_second": null,
+  "post_slow_start_mib_per_second": null
+}

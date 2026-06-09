@@ -22,6 +22,16 @@ need_file() {
   fi
 }
 
+sudo_run() {
+  local password="${SUDO_PASSWORD:-${SWEEP_SUDO_PASSWORD:-}}"
+
+  if [[ -n "$password" ]]; then
+    printf '%s\n' "$password" | sudo -S -p '' "$@"
+  else
+    sudo "$@"
+  fi
+}
+
 # Sets the CWND limit of my_cca.c. 0 disables the extra my_cca cap.
 optimal_cwnd_size="${1:-}"
 if [[ "$optimal_cwnd_size" =~ ^[0-9]+$ ]]; then
@@ -38,7 +48,7 @@ fi
 # FIXME: I think we only need password once when running the top "bash" script?
 log "Checking sudo access"
 echo "This script may ask for your sudo password to sign, unload, and load the kernel module."
-sudo -v
+sudo_run -v
 
 # Keep the sudo session alive until the script finishes to avoid multiple password prompts
 keep_sudo_alive() {
@@ -56,7 +66,7 @@ trap 'kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true' EXIT
 log "Checking whether ${MODULE_NAME} is already loaded"
 if sysctl net.ipv4.tcp_allowed_congestion_control | grep -q "${MODULE_NAME}"; then
   log "Unloading existing ${MODULE_NAME}"
-  sudo rmmod "$MODULE_NAME"
+  sudo_run rmmod "$MODULE_NAME"
 else
   echo "${MODULE_NAME} is not currently loaded."
 fi
@@ -72,11 +82,11 @@ need_file "$SIGN_KEY"
 need_file "$SIGN_CERT"
 
 log "Signing ${MODULE_FILE}"
-sudo "$SIGN_FILE" sha256 "$SIGN_KEY" "$SIGN_CERT" "$MODULE_FILE"
+sudo_run "$SIGN_FILE" sha256 "$SIGN_KEY" "$SIGN_CERT" "$MODULE_FILE"
 
 
 log "Loading ${MODULE_FILE}"
-sudo insmod "$MODULE_FILE" cwnd_limit="$optimal_cwnd_size"
+sudo_run insmod "$MODULE_FILE" cwnd_limit="$optimal_cwnd_size"
 
 log "Verifying TCP congestion control list"
 sysctl net.ipv4.tcp_allowed_congestion_control

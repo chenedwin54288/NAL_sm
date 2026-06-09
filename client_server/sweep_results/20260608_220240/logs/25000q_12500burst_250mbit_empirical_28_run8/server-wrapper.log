@@ -1,0 +1,67 @@
+
+==> Resetting TBF on eno1
+
+==> Applying TBF: rate=250Mbit burst=12500b limit=25000b
+
+==> Initializing my_cca with CWND limit 28
+
+==> Initializing my_cca with CWND: 28
+
+==> Checking sudo access
+This script may ask for your sudo password to sign, unload, and load the kernel module.
+
+==> Checking whether my_cca is already loaded
+
+==> Unloading existing my_cca
+
+==> Building my_cca
+make -C /lib/modules/5.15.0-179-generic/build M=/home/nal/NAL_edwin_sm/client_server/custom_cca modules
+make[1]: Entering directory '/usr/src/linux-headers-5.15.0-179-generic'
+make[1]: Leaving directory '/usr/src/linux-headers-5.15.0-179-generic'
+
+==> Signing my_cca.ko
+
+==> Loading my_cca.ko
+
+==> Verifying TCP congestion control list
+net.ipv4.tcp_allowed_congestion_control = reno cubic my_cca
+
+Success: my_cca is loaded and available to the TCP stack.
+
+==> Refreshing sudo access for background extractors
+
+==> Starting server. Connect the client to 0.0.0.0:9000
+Generating 1073741824 GB of zeros
+Started log extractor with PID 1963891
+Listening on 0.0.0.0:9000 ...
+Client connected from ('192.168.88.253', 36674)
+Set SO_MAX_PACING_RATE to 125000000 bytes/s (1000.00 Mbit/s)
+Started R_arrival extractor with PID 1964066
+Sent 1073741824 bytes in 36.16s (28.32 MiB/s)
+After slow start: 28.31 MiB/s over 36.13s (bytes_acked)
+Stopped R_arrival extractor
+Stopped log extractor
+
+==> Creating output directory /home/nal/NAL_edwin_sm/client_server/DB/1GB/1GB_36674_28
+
+==> Filtering kernel log for 192.168.88.253:36674
+Wrote 11895 matching rows to /home/nal/NAL_edwin_sm/client_server/DB/1GB/1GB_36674_28/filtered_context.csv
+
+==> Extracting CSV summary
+Wrote JSON summary for 11895 CSV rows to /home/nal/NAL_edwin_sm/client_server/DB/1GB/1GB_36674_28/ip_info.json
+
+==> Creating CWND graph
+Found 58 sharktooth edges with drop threshold 10
+Average top cwnd: 19.53
+Average bottom cwnd: 9.02
+Saved graph with 500 samples from /home/nal/NAL_edwin_sm/client_server/DB/1GB/1GB_36674_28/filtered_context.csv to /home/nal/NAL_edwin_sm/client_server/DB/1GB/1GB_36674_28/cwnd_192_168_88_253_36674.png
+
+==> Done
+Results: /home/nal/NAL_edwin_sm/client_server/DB/1GB/1GB_36674_28
+Client: 192.168.88.253:36674
+Elapsed seconds: 36.157832860946655
+Drop rate: 0.288104 (3427/11895 loss_recovery rows)
+Drop rate incl. fast retransmit: 0.436654 (5194/11895 loss_recovery + fast_retransmit rows)
+post_slow_start_mbit_per_second: 237.516477
+post_slow_start_mib_per_second: 28.314170
+Server after slow start: After slow start: 28.31 MiB/s over 36.13s (bytes_acked)

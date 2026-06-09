@@ -1,0 +1,16 @@
+
+==> Resetting TBF on eno1
+
+==> Applying TBF: rate=500Mbit burst=12500b limit=6250b
+
+==> Initializing my_cca with CWND limit 15
+
+==> Initializing my_cca with CWND: 15
+
+==> Checking sudo access
+This script may ask for your sudo password to sign, unload, and load the kernel module.
+
+==> Checking whether my_cca is already loaded
+
+==> Unloading existing my_cca
+rmmod: ERROR: Module my_cca is in use

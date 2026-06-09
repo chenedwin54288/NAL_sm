@@ -1,0 +1,71 @@
+
+==> Resetting TBF on eno1
+
+==> Applying TBF: rate=500Mbit burst=25000b limit=50000b
+
+==> Initializing my_cca with CWND limit 53
+
+==> Initializing my_cca with CWND: 53
+
+==> Checking sudo access
+This script may ask for your sudo password to sign, unload, and load the kernel module.
+
+==> Checking whether my_cca is already loaded
+
+==> Unloading existing my_cca
+
+==> Building my_cca
+make -C /lib/modules/5.15.0-179-generic/build M=/home/nal/NAL_edwin_sm/client_server/custom_cca modules
+make[1]: Entering directory '/usr/src/linux-headers-5.15.0-179-generic'
+make[1]: Leaving directory '/usr/src/linux-headers-5.15.0-179-generic'
+
+==> Signing my_cca.ko
+
+==> Loading my_cca.ko
+
+==> Verifying TCP congestion control list
+net.ipv4.tcp_allowed_congestion_control = reno cubic my_cca
+
+Success: my_cca is loaded and available to the TCP stack.
+
+==> Refreshing sudo access for background extractors
+
+==> Starting server. Connect the client to 0.0.0.0:9000
+Generating 1073741824 GB of zeros
+Started log extractor with PID 2228420
+Listening on 0.0.0.0:9000 ...
+Client connected from ('192.168.88.253', 37012)
+Set SO_MAX_PACING_RATE to 125000000 bytes/s (1000.00 Mbit/s)
+Started R_arrival extractor with PID 2228625
+Sent 1073741824 bytes in 18.05s (56.72 MiB/s)
+After slow start: 56.71 MiB/s over 18.04s (bytes_acked)
+Stopped R_arrival extractor
+Stopped log extractor
+
+==> Creating output directory /home/nal/NAL_edwin_sm/client_server/DB/1GB/1GB_37012_53
+
+==> Filtering kernel log for 192.168.88.253:37012
+Wrote 4734 matching rows to /home/nal/NAL_edwin_sm/client_server/DB/1GB/1GB_37012_53/filtered_context.csv
+
+==> Extracting CSV summary
+Wrote JSON summary for 4734 CSV rows to /home/nal/NAL_edwin_sm/client_server/DB/1GB/1GB_37012_53/ip_info.json
+
+==> Creating CWND graph
+/home/nal/NAL_edwin_sm/client_server/AnalysisPhase/extract_ip_cwnd.py:267: UserWarning: Creating legend with loc="best" can be slow with large amounts of data.
+  fig.tight_layout()
+/home/nal/NAL_edwin_sm/client_server/AnalysisPhase/extract_ip_cwnd.py:268: UserWarning: Creating legend with loc="best" can be slow with large amounts of data.
+  fig.savefig(output_path, dpi=150)
+Found 119 sharktooth edges with drop threshold 10
+Average top cwnd: 38.62
+Average bottom cwnd: 19.66
+Saved graph with 500 samples from /home/nal/NAL_edwin_sm/client_server/DB/1GB/1GB_37012_53/filtered_context.csv to /home/nal/NAL_edwin_sm/client_server/DB/1GB/1GB_37012_53/cwnd_192_168_88_253_37012.png
+
+==> Done
+Results: /home/nal/NAL_edwin_sm/client_server/DB/1GB/1GB_37012_53
+Client: 192.168.88.253:37012
+Elapsed seconds: 18.053255796432495
+Drop rate: 0.242501 (1148/4734 loss_recovery rows)
+Drop rate incl. fast retransmit: 0.286016 (1354/4734 loss_recovery + fast_retransmit rows)
+post_slow_start_mbit_per_second: 475.715432
+post_slow_start_mib_per_second: 56.709699
+Server after slow start: After slow start: 56.71 MiB/s over 18.04s (bytes_acked)

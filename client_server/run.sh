@@ -103,6 +103,16 @@ need_command() {
   command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
 }
 
+sudo_run() {
+  local password="${SUDO_PASSWORD:-${SWEEP_SUDO_PASSWORD:-}}"
+
+  if [[ -n "$password" ]]; then
+    printf '%s\n' "$password" | sudo -S -p '' "$@"
+  else
+    sudo "$@"
+  fi
+}
+
 # Small validators for integer options.
 is_positive_int() {
   [[ "$1" =~ ^[0-9]+$ ]] && (( "$1" > 0 ))
@@ -336,15 +346,15 @@ mkdir -p "$TMP_DIR"
 
 # Remove any existing root qdisc so every experiment starts from a known state.
 log "Resetting TBF on $DEV"
-sudo tc qdisc del dev "$DEV" root 2>/dev/null || true
+sudo_run tc qdisc del dev "$DEV" root 2>/dev/null || true
 
 
 # Optionally apply a new Token Bucket Filter for this experiment.
 if [[ -n "$TBF_RATE" ]]; then
   log "Applying TBF: rate=$TBF_RATE burst=$TBF_BURST limit=$TBF_LIMIT"
-  sudo tc qdisc add dev "$DEV" root tbf rate "$TBF_RATE" burst "$TBF_BURST" limit "$TBF_LIMIT"
-  sudo ethtool -K eno1 tso off
-  sudo ethtool -K eno1 gso off
+  sudo_run tc qdisc add dev "$DEV" root tbf rate "$TBF_RATE" burst "$TBF_BURST" limit "$TBF_LIMIT"
+  sudo_run ethtool -K eno1 tso off
+  sudo_run ethtool -K eno1 gso off
   
   
 
@@ -383,11 +393,11 @@ fi
 # r_arrival_extractor.py may need sudo for bpftrace.
 # Refresh sudo now so non-interactive sudo calls can work while the server runs.
 log "Refreshing sudo access for background extractors"
-sudo -v
+sudo_run -v
 
 # Build the server command as an array so paths and values with spaces stay safe.
 SERVER_CMD=(
-  sudo -E python3 "$SERVER_PATH"
+  sudo_run -E python3 -u "$SERVER_PATH"
   --host "$SERVER_HOST"
   --port "$SERVER_PORT"
   --size "$DATA_SIZE_GIB"
