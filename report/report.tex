@@ -117,7 +117,7 @@ In addition
 and the burst size is not that big, the cumulatuve apparoach could accurately estimate the traffic policing rate
   => essentially
 
-\section{Physical Setup}
+\section{Experimental Setup}
 
 The first chalenge was to extract the cwnd
 \subsection{Using WeHe as a replay device and extracting the cwnd using}
@@ -157,21 +157,50 @@ clean the log in certain interval
 added sequence number to the pr_info to reduce the liklihood of a reocrded packet being overwritten
 
 
-\subsection{Final Base Setup}
+\subsection{Final Base Program Setup}
 With all of the try and error from before, we then came up with a final experiment base setup as shown below:
 (will add the design diagram later)
-- how do we define a loss
 
 
+
+Note: look at client_server, my explanation below maybe on the old version or unclear. Modify it so that it matches with the newest version
+Note: Also some explanations may npw be very clear, so modify it to be more specific
+- run.sh => sets the the src port, src ip, CWND and data size to be sent. Could select whether we wnat to use "my_cca" or "reno" (when CWND == 0, 
+            "reno" will be used). The TBF parameters would also be specified here.
+- when run.sh is executed, the script will firstly check unload the current "my_cca" from the system
+  it will then load the CWND to the cca script, recompile it and add it into the system selection
+  the script, once seeing that "my_cca" exists in the solution, will then setup the a qdisc (outgress, so from server to client) TBF in front
+  of the server to simulate the endpoint bottleneck (normally this sgould be set on the client side, but to set a ingress qdisc on the client side
+  we have to create a fake listener in front the client to build server=>fake listener{outgress queue}=>client) which was not ideal
+  the script will then start the sever, which the server would start 3 subprocess running in the backend
+
+  - subprocess 1: log extractor => extract the logs from ring buffer, search the ones from pr_info and that contains the port number
+  - subprocess 2: log cleaner => clean the ring buffer
+  - subprocess 3: r arrival extractor => used to determine the R_arrival rate (will be clarified later) but not very accurate
+- Note that the server does a BULK send, that is it tries to send the data "as fast as possible, capped at 1Gib"
+- the server then wait untiil a connection from the client
+- once the server finishes sendign all datam it would then calculate the loss rate, throughput (after the slowstart phase), store 
+this information in ... and generate a shark-tooth graph containing the first 500 pr_info logs
+
+
+
+\subsection{Physical Setup}
+- server and client connected to the same router (within the same subnet)
+- so there is no random bottleneck in between the client and the server
+- the only bottleck that we will have is the qdisc TBF set in front of the server
 
 
 
 
 \section{Experiment 1: testing Franziska apparoach}
 \subsection{parameters}
-- 
+QUEUE_SIZES=(6250, 12500, 25000, 50000, 100000)
+TOKEN_GENERATION_RATES=(250 500 750 1000)
+BURST_SIZES=(5840 12500 25000 50000 100000)
 
 \subsection{Changes to the original cca script}
+- compare "client_server/custom_cca/my_cca.c" and "https://github.com/torvalds/linux/blob/master/net/ipv4/tcp_cong.c" 
+- write brifely with small code snippets of how we cap the cwnd
 
 \subsection{Finding the empirical values: algorithms}
 - How do we do it?
@@ -214,7 +243,7 @@ meaning that the enquesing rate is generally faster than the token generation ra
 
 => because in Frabziska's report it stated that "increasing the burst size does not influence throughput under the optimal cwnd algorithms"
 => burst size 50000 bytes
-=> How did we do this?: reverse calculate 
+=> How did we do this?: reverse calculate using the empirical value 
 
 
 \subsection{clamping rwnd from the client side}
@@ -232,6 +261,8 @@ trying to find out the empirical value)
 
 \subsection{Using WeHe as a replay server again}
 With the Base Setup, it is now possible for us to extract the correct cwnd
+however, with the token generation that we currently have, the WeHe replay rate cannot really fill up
+the TBF queue
 
 
 
