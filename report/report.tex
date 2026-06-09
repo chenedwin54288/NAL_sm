@@ -1,0 +1,265 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{placeins}
+\usepackage{geometry}
+\geometry{a4paper, left=2.5cm, right=2.5cm, top=2cm, bottom=2cm}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{subcaption}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{svg}
+\usepackage{float}
+\svgsetup{inkscapepath=svgsubdir}
+\usepackage{comment}
+\usepackage[colorlinks,bookmarks=false,linkcolor=blue,urlcolor=blue, citecolor=blue]{hyperref}
+\newcommand{\mail}[1]{{\href{mailto:#1}{#1}}}
+\newcommand{\ftplink}[1]{{\href{ftp://#1}{#1}}}
+\graphicspath{{figures/}}
+
+
+\definecolor{epflred}{RGB}{255, 0, 0}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{MATH454 - Parallel and High-Performance Computing}
+\rfoot{\thepage}
+
+\titleformat{\section}{\normalfont\large\bfseries}{\thesection.}{1em}{}
+\titleformat{\subsection}{\normalfont\bfseries}{\thesubsection.}{1em}{}
+\titleformat{\subsubsection}{\normalfont\bfseries}{\thesubsubsection.}{1em}{}
+
+\renewcommand{\contentsname}{Contents}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\baselinestretch}{1.25}
+
+\newcommand{\diagramplaceholder}[2]{
+  \begin{figure}[H]
+    \centering
+    \fbox{
+      \begin{minipage}[c][5cm][c]{0.85\textwidth}
+        \centering
+        #2
+      \end{minipage}
+    }
+    \caption{#1}
+  \end{figure}
+}
+
+\begin{document}
+
+\thispagestyle{empty}
+\begin{center}
+\vspace*{1cm}
+{\Huge \color{epflred}\bfseries EPFL}
+
+\vspace{0.5cm}
+{\large Network Architecture Lab - Semester Project}
+
+\vspace{0.1cm}
+\rule{6cm}{0.4pt}
+
+\vspace{0.1cm}
+Project Final Report
+
+\rule{6cm}{0.4pt}
+
+\vspace{0.5cm}
+{\Large }
+
+\vspace{1cm}
+
+Author:
+
+Sheng-Wen Chen [414932]
+
+
+
+
+\vspace{0.5cm}
+June 2026
+\end{center}
+
+\tableofcontents
+
+\newpage
+
+
+\section{Introduction}
+- Token Bucket Filter (TBF) is used by ISPs to enforce traffic limits, regulating traffic and clearing 
+up network congestion. There can be two ways of assigning TBF, one is where multiple users share the 
+same TBF for the same application (such as streaming Youtube), and the other is each user is assigned
+one TBF. Under the case that the client is assigned one TBF, it is possible for the sender to
+optimize the queue size, enabling the application to send in a rate that optimizes the full queue, sending in a rate (cwnd) that does
+not cause traffic policiing (dropping the packets when the queue is full).
+- While there are works (Franzisk's work) exploring algorithms to estimate this cwnd, and works to estimate 
+the traffic policing rate (Martyna's), both experiments where conducted in a ns3 environment. 
+- Goal of this project is to integrate the works together to see whether the algorithm3 works in physical scenario.
+In addition
+
+
+\section{Background}
+\subsection{}
+\subsection{Existing work}
+- Franzisk's work: algorithm 1 and algorithm 2  
+  => algorithm1: window = BDP + buffer size - 1 MSS
+  => window = BDP + 1 MSS
+
+- Martynas work: policing rate 
+  => we focus on the client side cumulative approach, where "when the queue size" is small
+and the burst size is not that big, the cumulatuve apparoach could accurately estimate the traffic policing rate
+  => essentially
+
+\section{Physical Setup}
+
+The first chalenge was to extract the cwnd
+\subsection{Using WeHe as a replay device and extracting the cwnd using}
+- WeHe is an application used to detect whether the ISP is doing traffic differentiation and to check whether 
+the bottleneck is on the end point ISP 
+- Wehe could replay a pre-recorded packets between the server and the client, and mesasure whethre there is a throughput difference
+- In order to implement algorithm 1, we initially decided to use Wehe as a replay server and create another process
+that runs "ss" script in the background to extract the cwnd of the WeHe server 
+- however, the "ss" command could not keep-up to the pace of fast changing cwnd rate (kernel's overhead to process a Netlink dump and copy that memory back),
+cuasing us to not able to see an ideal time && cwnd shark-tooth shaped graph
+(Figure report/images/physical_setup1/WeHe_youtube.png)
+
+\subsection{Extracting the cwnd by adding custom cca in the modules}
+=> instead of using the "ss" command, we decided to modify the linux kernel code 
+that controls the congestion control algorithm directly, my making the 
+script print pr_info everytime it receives an ACK
+=> in addition, we decided to build our simple client and server setup, as we could not control
+the sending rate, and the amount of data sent by the Wehe replay 
+=> how to load our own cca modules? where did I get this info from
+... we learnt how to do this partially from this documentation  
+.. to explain simply, cca provides a struct that allowed as to manually specify the function
+to be called during cca 
+=> however even after setting this we were not able to get the ideal shark-tooth shaped diagram
+(Figure report/images/physical_setup2/no_tbf_ring_not_clean.png)
+- Figure shows the case when we tested our server sending 20Gb to the client, as it can be seen the 
+slowstart did not start from cwnd == 10
+
+
+\subsection{Cleaning up the logs made by the cca module (linux uses ring buffer)}
+- The cause of the previous issue was due to the ring buffer
+- Everytime pr_info is called, the log will be written to ... which is a ring buffer
+- Since we were printing pr_info everytime receiving an ACK, the ring would be filled up quickly and overwrite the
+exisiting logs in the buffer -> a "cleaning process" was required
+- Thus we defined a backend process that would be called when the server starts running, whicb this process will
+clean the log in certain interval
+- in addition, we modified the saping rate from "every ACK" to "whenever the phase changes" && "every 100 ACKs", also 
+added sequence number to the pr_info to reduce the liklihood of a reocrded packet being overwritten
+
+
+\subsection{Final Base Setup}
+With all of the try and error from before, we then came up with a final experiment base setup as shown below:
+(will add the design diagram later)
+- how do we define a loss
+
+
+
+
+
+
+\section{Experiment 1: testing Franziska apparoach}
+\subsection{parameters}
+- 
+
+\subsection{Changes to the original cca script}
+
+\subsection{Finding the empirical values: algorithms}
+- How do we do it?
+=> automation script that does this for us. Initially, the automation script will run
+normal TCP New Reno, records the cwnd (our cca works on top of TCP Reno, we just added pr_info
+to the suitable location), and calculate the average cwnd (mountain edge of the shark-tooth graph)
+=> generally this average cwnd is "very close" to the empirical cwnd, we thus decreased the cwnd cap by 1,
+re-run the server client communication again, to see whethre the loss rate has decreased or not
+=> the "loss rate" could be set by the user when running the server script (for queue_sizes to 12500 we are using loss rate of 0.20
+and for queue-sizes from 25000 we are using loss rate of 0.05)
+
+
+\subsection{different burst sizes}
+
+
+
+From the experiments above, we have seen that the assumtoion holds, where when the queue_size is small, epirical
+cwnd indeed achieved a better throughput. However, in all cases algorithm1 were always overestikamting the cwnd size
+in fact, TCP Reno performed better. 
+
+
+\subsection{Cause of the inaccurate estimation}
+- R_arrival rate not taken into account
+- algorithm2 defined the calculaytion of the optimal cwnd as BDP + queue_size - 1MSS, 
+however, when the packet from the tcp application arrives faster than the token_generation_rate, 
+it will accumulate in the qdisc queue. When we are calculating the optimal cwnd size, we need to 
+subtract this accumulated packets from the real queue size (as this is the actual amount that 
+we could increase the cwnd to accumulate)
+Essentially 
+BDP- how many bytes can be on fly for each RTT
+Q_penality - how many bytes accumulates in the qdisc queue in each RTT
+Q_effective - how many bytes can the queue still accumulate [11:42]Rather the problem that was, when we set the cwnd so big, TCP was sending data to the TBF so fast that, the queue gets fillies up too quickly, causing the empirical cwnd to be usually smaller than the theoretical cwnd. Because we overestimated.
+
+- the current setup allows the sender to send set amoutn of data in BULK and "as fast as possible capped in 1Gib"
+meaning that the enquesing rate is generally faster than the token generation rate
+- Taking this into account, 
+
+
+\subsection{burst size 50000 to test the penality apparoach}
+
+=> because in Frabziska's report it stated that "increasing the burst size does not influence throughput under the optimal cwnd algorithms"
+=> burst size 50000 bytes
+=> How did we do this?: reverse calculate 
+
+
+\subsection{clamping rwnd from the client side}
+=> now we know the empirical rate, since we want to establish this cwnd capped on the server side
+from the TCP handshake phase, we disabled the cwnd cap on the server side to test whether 
+we could still achive the empirical throughput 
+
+
+
+\section{Experiment 2: Estimation of the rwnd from the client side}
+Since we know that it is possible to limit the cwnd by setting the rwnd from the client side,
+we would also like to see whether it is possible for us to estimate this rwnd from the
+client side (before we were testing the throughput from the server side and manually
+trying to find out the empirical value)
+
+\subsection{Using WeHe as a replay server again}
+With the Base Setup, it is now possible for us to extract the correct cwnd
+
+
+
+\subsection{Cumulative bytes arrival}
+Can estimate the BDP when we have balanced queue size && burst, however
+only BDP, e cannot estimate the empirical rwnd because the r_arrival rate
+is not taken into account
+=> the setup: 1,2ms (so 3RTTS) of replays where the server sends as fast as possible capped
+at 1Gib
+
+
+
+
+\subsection{Receiver-Assisted TBF Enqueue-Rate Estimation}
+
+
+
+
+
+\section{Limitations}
+=> cannot set the RTT in the physical setup (the router could only set queue sizes... does not have 
+OS that could run qdisc)
+
+
+
+
+
+
+\section{Conclusions}
+
+\end{document}
