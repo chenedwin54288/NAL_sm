@@ -355,7 +355,7 @@ result = calculation.calculate_cwnd(
     r_arrival_bps=None,
 )
 
-bdp_cwnd = max(1, math.floor(result["bdp_bytes"] / mss_bytes))
+bdp_cwnd = max(1, math.floor((result["bdp_bytes"] + mss_bytes) / mss_bytes))
 bdp_plus_queue_cwnd = result["original_cwnd"]
 print(f"{bdp_cwnd}\t{bdp_plus_queue_cwnd}")
 PY
@@ -794,7 +794,7 @@ main() {
 
       {
         printf '## Queue Size = %s bytes (burst: %s)\n\n' "$queue_bytes" "$burst_bytes"
-        printf '| TGR | TCP Reno (avg top cwnd) | Empirical | BDP + Q_size - MSS | BDP |\n'
+        printf '| TGR | TCP Reno (avg top cwnd) | Empirical | BDP + Q_size - MSS | BDP + 1 MSS |\n'
         printf '|---:|---:|---:|---:|---:|\n'
       } >>"$README_FILE"
 
@@ -833,7 +833,7 @@ main() {
         if ! command_output="$(
           run_repeated "bdp" "$bdp_cwnd" "$FIXED_CWND_RUNS" "$rate_mbit" "$queue_bytes" "$burst_bytes"
         )"; then
-          die "BDP run failed for rate=$rate_mbit queue=$queue_bytes burst=$burst_bytes cwnd=$bdp_cwnd"
+          die "BDP+1MSS run failed for rate=$rate_mbit queue=$queue_bytes burst=$burst_bytes cwnd=$bdp_cwnd"
         fi
         IFS=$'\t' read -r bdp_display bdp_tp bdp_loss bdp_first_loss bdp_avg_top <<<"$command_output"
 

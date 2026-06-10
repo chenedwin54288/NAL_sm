@@ -110,10 +110,10 @@ def main() -> int:
         f"- Mean throughput over all points: TCP Reno {fmt(strategy_means['reno'])} MiB/s, "
         f"Empirical {fmt(strategy_means['empirical'])} MiB/s, "
         f"BDP + Q - MSS {fmt(strategy_means['bdp_plus_queue'])} MiB/s, "
-        f"BDP {fmt(strategy_means['bdp'])} MiB/s.",
+        f"BDP + 1 MSS {fmt(strategy_means['bdp'])} MiB/s.",
         f"- Mean Empirical minus Reno throughput: {fmt(mean(empirical_gains))} MiB/s.",
         f"- Mean Empirical minus BDP + Q - MSS throughput: {fmt(mean(bdpq_gaps))} MiB/s.",
-        f"- Mean Empirical minus BDP throughput: {fmt(mean(bdp_gaps))} MiB/s.",
+        f"- Mean Empirical minus BDP + 1 MSS throughput: {fmt(mean(bdp_gaps))} MiB/s.",
         "",
         "Best-throughput winner counts:",
         "",

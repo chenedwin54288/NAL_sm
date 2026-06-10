@@ -20,14 +20,14 @@ STRATEGY_COLUMNS = [
     ("TCP Reno (avg top cwnd)", "reno"),
     ("Empirical", "empirical"),
     ("BDP + Q_size - MSS", "bdp_plus_queue"),
-    ("BDP", "bdp"),
+    ("BDP + 1 MSS", "bdp"),
 ]
 
 DISPLAY_NAME = {
     "reno": "TCP Reno",
     "empirical": "Empirical",
     "bdp_plus_queue": "BDP + Q - MSS",
-    "bdp": "BDP",
+    "bdp": "BDP + 1 MSS",
 }
 
 STRATEGY_ORDER = ["reno", "empirical", "bdp_plus_queue", "bdp"]
