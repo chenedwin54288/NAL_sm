@@ -17,19 +17,16 @@
 \usepackage{amsmath}
 \usepackage{svg}
 \usepackage{float}
-\svgsetup{inkscapepath=svgsubdir}
 \usepackage{comment}
 \usepackage[colorlinks,bookmarks=false,linkcolor=blue,urlcolor=blue, citecolor=blue]{hyperref}
-\newcommand{\mail}[1]{{\href{mailto:#1}{#1}}}
-\newcommand{\ftplink}[1]{{\href{ftp://#1}{#1}}}
-\graphicspath{{figures/}}
-
+\svgsetup{inkscapepath=svgsubdir}
+\graphicspath{{figures/}{images/}}
 
 \definecolor{epflred}{RGB}{255, 0, 0}
 
 \pagestyle{fancy}
 \fancyhf{}
-\lhead{MATH454 - Parallel and High-Performance Computing}
+\lhead{Network Architecture Lab - Semester Project}
 \rfoot{\thepage}
 
 \titleformat{\section}{\normalfont\large\bfseries}{\thesection.}{1em}{}
@@ -39,19 +36,11 @@
 \renewcommand{\contentsname}{Contents}
 \renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
 \renewcommand{\baselinestretch}{1.25}
+\setlength{\emergencystretch}{2em}
 
-\newcommand{\diagramplaceholder}[2]{
-  \begin{figure}[H]
-    \centering
-    \fbox{
-      \begin{minipage}[c][5cm][c]{0.85\textwidth}
-        \centering
-        #2
-      \end{minipage}
-    }
-    \caption{#1}
-  \end{figure}
-}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\mss}{\mathrm{MSS}}
+\newcommand{\bdp}{\mathrm{BDP}}
 
 \begin{document}
 
@@ -72,7 +61,7 @@ Project Final Report
 \rule{6cm}{0.4pt}
 
 \vspace{0.5cm}
-{\Large }
+{\Large Physical Validation of TCP Window Control under Token-Bucket Policing}
 
 \vspace{1cm}
 
@@ -80,226 +69,381 @@ Author:
 
 Sheng-Wen Chen [414932]
 
-
-
-
 \vspace{0.5cm}
 June 2026
 \end{center}
+
+\newpage
 
 \tableofcontents
 
 \newpage
 
-
 \section{Introduction}
-- Token Bucket Filter (TBF) is used by ISPs to enforce traffic limits, regulating traffic and clearing 
-up network congestion. There can be two ways of assigning TBF, one is where multiple users share the 
-same TBF for the same application (such as streaming Youtube), and the other is each user is assigned
-one TBF. Under the case that the client is assigned one TBF, it is possible for the sender to
-optimize the queue size, enabling the application to send in a rate that optimizes the full queue, sending in a rate (cwnd) that does
-not cause traffic policiing (dropping the packets when the queue is full).
-- While there are works (Franzisk's work) exploring algorithms to estimate this cwnd, and works to estimate 
-the traffic policing rate (Martyna's), both experiments where conducted in a ns3 environment. 
-- Goal of this project is to integrate the works together to see whether the algorithm3 works in physical scenario.
-In addition
 
+Internet Service Providers often use rate limiters to enforce a maximum traffic rate for a subscriber, an application class, or a traffic aggregate. A common implementation is a Token Bucket Filter (TBF): tokens are generated at a configured rate, packets consume tokens before transmission, and excess packets are either delayed in a queue or dropped when the queue is full. From the user's point of view, this creates a simple question: if the bottleneck rate is known or can be inferred, can a TCP sender use the full allowed rate without repeatedly overflowing the policer and entering loss recovery?
+
+Two previous semester projects studied this question in simulation. Friedli studied congestion-control behavior behind a TBF and proposed fixed-window algorithms that cap the sender's effective window around the bandwidth-delay product (BDP). Rimkevicius studied the complementary problem of estimating the TBF policing rate from packet traces, with the strongest receiver-side result based on the derivative of cumulative byte arrivals. Both works used ns-3, where the bottleneck, queue, loss events, and RTT are controlled and observable.
+
+The goal of this project was to bridge these two works into a physical Linux setup. The central question is not whether the formulas are correct in an ideal simulator, but whether they remain useful when the sender is a real Linux TCP stack, the rate limiter is the Linux \code{tc} TBF qdisc, packets pass through a NIC driver, and measurements must be extracted from kernel state. The project therefore built a client-server testbed, implemented a Reno-like congestion-control module with a configurable congestion-window cap, added kernel-log based instrumentation, tested receiver-side receive-window clamping, and compared the simulated algorithms against physical measurements.
+
+The main result is nuanced. The idea of limiting the effective TCP window is valid in the physical setup: a carefully chosen cap can avoid repeated loss recovery and greatly improve throughput in small-queue cases. However, the original \(\bdp + Q - \mss\) formula often overestimates the correct cap. In the physical setup, the application and TCP stack can enqueue packets into the TBF faster than the TBF drains them. Part of the configured qdisc queue is therefore already consumed by the enqueue/drain mismatch, and cannot be counted as useful extra window. Accounting for this effect explains many of the discrepancies between simulation and the physical experiments.
 
 \section{Background}
-\subsection{}
-\subsection{Existing work}
-- Franzisk's work: algorithm 1 and algorithm 2  
-  => algorithm1: window = BDP + buffer size - 1 MSS
-  => window = BDP + 1 MSS
 
-- Martynas work: policing rate 
-  => we focus on the client side cumulative approach, where "when the queue size" is small
-and the burst size is not that big, the cumulatuve apparoach could accurately estimate the traffic policing rate
-  => essentially
+\subsection{Token-Bucket Policing and TCP Windows}
+
+A TBF is described by three parameters: a token generation rate \(R_{\mathrm{tbf}}\), a burst size \(B\), and a queue limit \(Q_{\mathrm{config}}\). The token rate determines the long-term output rate. The burst size determines how many tokens can accumulate when the sender is idle or sending below the token rate. The queue limit determines how much traffic can wait for tokens before packets are dropped.
+
+TCP controls sending through two windows. The congestion window (\code{cwnd}) is chosen by the congestion-control algorithm at the sender. The receive window (\code{rwnd}) is advertised by the receiver and expresses how much data the receiver is willing to accept. The effective sending window is approximately:
+
+\[
+W_{\mathrm{send}} = \min(\code{cwnd}, \code{rwnd}).
+\]
+
+Traditional loss-based algorithms such as TCP Reno and TCP Cubic grow \code{cwnd} until loss, then reduce it. This behavior is useful when loss indicates shared-network congestion, but it can be inefficient behind a per-flow TBF. If the user has a dedicated rate limit, the best behavior is often to send steadily at the token rate rather than probing above it and recovering from avoidable drops.
+
+\subsection{Prior Work in ns-3}
+
+Friedli's project, \emph{Revisiting Traffic Congestion Control Protocols at the Last Mile}, studied how TCP New Reno, Cubic, and BBR interact with a TBF in ns-3. The key observation was that the maximum useful amount of in-flight data is related to the BDP and to the bottleneck queue. The project proposed:
+
+\[
+W_1 = \bdp + Q_{\mathrm{config}} - \mss
+\]
+
+and later found that a simpler cap,
+
+\[
+W_2 = \bdp + \mss,
+\]
+
+also reaches the TBF rate in many configurations while avoiding buffer build-up. In simulation, the algorithms improved small-buffer cases by roughly 33\% for New Reno and 17\% for Cubic. For larger queues or larger bursts, default TCP already performs closer to the TBF rate, so the relative gain decreases.
+
+Rimkevicius's project, \emph{Inference of Traffic Differentiation Policing Rate}, studied how to infer \(R_{\mathrm{tbf}}\) from one traffic trace. It compared sender-side and receiver-side methods. The most accurate method was receiver-side cumulative-arrival differentiation: compute cumulative received bytes over time, differentiate the curve, and use a statistic such as the median or a lower percentile of the derivative samples. Loss-based methods were more conservative, but often underestimated the true policing rate. This project used that work as the natural path toward a receiver-driven system: first infer \(R_{\mathrm{tbf}}\), then choose a window cap from the inferred rate.
+
+\subsection{What Changes in a Physical Linux Setup}
+
+The ns-3 model hides several details that matter in Linux. First, a Linux TBF qdisc is an egress queue. It is easy to shape traffic leaving the server, but shaping ingress traffic at the client requires redirecting traffic through an \code{ifb} virtual interface. In this project the stable experiments therefore placed the TBF on the server egress path, which emulates the bottleneck seen by server-to-client traffic.
+
+Second, the sender does not place one MTU-sized packet at a time into the qdisc. With TCP Segmentation Offload (TSO) and Generic Segmentation Offload (GSO), the kernel or NIC may handle large segments that are later split into MTU-sized packets. This produced large qdisc enqueue events and NIC requeues in early experiments, making the measured \code{cwnd} behavior difficult to interpret. The final automation disables TSO and GSO before applying the TBF.
+
+Third, measuring \code{cwnd} at high frequency is itself difficult. Polling with \code{ss} cannot keep up with fast changes because it requires repeated Netlink dumps. Kernel logging with \code{pr\_info} gives better visibility, but Linux uses a finite ring buffer, so frequent logs are overwritten unless they are extracted and cleared during the transfer.
 
 \section{Experimental Setup}
 
-The first chalenge was to extract the cwnd
-\subsection{Using WeHe as a replay device and extracting the cwnd using}
-- WeHe is an application used to detect whether the ISP is doing traffic differentiation and to check whether 
-the bottleneck is on the end point ISP 
-- Wehe could replay a pre-recorded packets between the server and the client, and mesasure whethre there is a throughput difference
-- In order to implement algorithm 1, we initially decided to use Wehe as a replay server and create another process
-that runs "ss" script in the background to extract the cwnd of the WeHe server 
-- however, the "ss" command could not keep-up to the pace of fast changing cwnd rate (kernel's overhead to process a Netlink dump and copy that memory back),
-cuasing us to not able to see an ideal time && cwnd shark-tooth shaped graph
-(Figure report/images/physical_setup1/WeHe_youtube.png)
+\subsection{Initial Wehe-Based Attempt}
 
-\subsection{Extracting the cwnd by adding custom cca in the modules}
-=> instead of using the "ss" command, we decided to modify the linux kernel code 
-that controls the congestion control algorithm directly, my making the 
-script print pr_info everytime it receives an ACK
-=> in addition, we decided to build our simple client and server setup, as we could not control
-the sending rate, and the amount of data sent by the Wehe replay 
-=> how to load our own cca modules? where did I get this info from
-... we learnt how to do this partially from this documentation  
-.. to explain simply, cca provides a struct that allowed as to manually specify the function
-to be called during cca 
-=> however even after setting this we were not able to get the ideal shark-tooth shaped diagram
-(Figure report/images/physical_setup2/no_tbf_ring_not_clean.png)
-- Figure shows the case when we tested our server sending 20Gb to the client, as it can be seen the 
-slowstart did not start from cwnd == 10
+The first implementation attempted to reuse Wehe as a replay source. Wehe is designed to detect traffic differentiation by replaying recorded application flows and comparing throughput across replayed traffic classes. It was attractive because it already provides a client-server traffic generator and a realistic replay workload.
 
+However, Wehe was not suitable for the first physical validation step. The replay rate and total transmitted data were not easy to control precisely, and the \code{ss}-based background process used to extract \code{cwnd} could not sample fast enough to reveal the expected Reno sawtooth. Figure~\ref{fig:wehe_cwnd} shows an example of the resulting measurement. The trace is useful as a first sanity check, but it is not precise enough for selecting a window cap.
 
-\subsection{Cleaning up the logs made by the cca module (linux uses ring buffer)}
-- The cause of the previous issue was due to the ring buffer
-- Everytime pr_info is called, the log will be written to ... which is a ring buffer
-- Since we were printing pr_info everytime receiving an ACK, the ring would be filled up quickly and overwrite the
-exisiting logs in the buffer -> a "cleaning process" was required
-- Thus we defined a backend process that would be called when the server starts running, whicb this process will
-clean the log in certain interval
-- in addition, we modified the saping rate from "every ACK" to "whenever the phase changes" && "every 100 ACKs", also 
-added sequence number to the pr_info to reduce the liklihood of a reocrded packet being overwritten
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.86\textwidth]{physical_setup1/WeHe_youtube.png}
+  \caption{Early Wehe-based experiment. Polling \code{ss} did not capture the fast \code{cwnd} transitions needed for this project.}
+  \label{fig:wehe_cwnd}
+\end{figure}
 
+\subsection{Custom Congestion-Control Module}
 
-\subsection{Final Base Program Setup}
-With all of the try and error from before, we then came up with a final experiment base setup as shown below:
-(will add the design diagram later)
+The project then moved to a controlled bulk-transfer setup and implemented a custom Linux congestion-control module, \code{my\_cca}. The module is Reno-style: it implements slow start, additive increase, Reno-like slow-start threshold reduction, and an undo callback. The important modification is a module parameter, \code{cwnd\_limit}. When this parameter is nonzero, both slow start and congestion avoidance apply:
 
+\[
+\code{cwnd} \leftarrow \min(\code{cwnd}, \code{cwnd\_limit}).
+\]
 
+When \code{cwnd\_limit = 0}, the cap is disabled and the module behaves as an uncapped Reno-like baseline. This made it possible to compare capped and uncapped behavior while keeping the same logging and analysis pipeline.
 
-Note: look at client_server, my explanation below maybe on the old version or unclear. Modify it so that it matches with the newest version
-Note: Also some explanations may npw be very clear, so modify it to be more specific
-- run.sh => sets the the src port, src ip, CWND and data size to be sent. Could select whether we wnat to use "my_cca" or "reno" (when CWND == 0, 
-            "reno" will be used). The TBF parameters would also be specified here.
-- when run.sh is executed, the script will firstly check unload the current "my_cca" from the system
-  it will then load the CWND to the cca script, recompile it and add it into the system selection
-  the script, once seeing that "my_cca" exists in the solution, will then setup the a qdisc (outgress, so from server to client) TBF in front
-  of the server to simulate the endpoint bottleneck (normally this sgould be set on the client side, but to set a ingress qdisc on the client side
-  we have to create a fake listener in front the client to build server=>fake listener{outgress queue}=>client) which was not ideal
-  the script will then start the sever, which the server would start 3 subprocess running in the backend
+The module logs \code{cwnd}, RTT samples, bytes acknowledged, bytes sent, and a phase label whenever enough ACKs have passed or the phase changes. The phase labels are:
 
-  - subprocess 1: log extractor => extract the logs from ring buffer, search the ones from pr_info and that contains the port number
-  - subprocess 2: log cleaner => clean the ring buffer
-  - subprocess 3: r arrival extractor => used to determine the R_arrival rate (will be clarified later) but not very accurate
-- Note that the server does a BULK send, that is it tries to send the data "as fast as possible, capped at 1Gib"
-- the server then wait untiil a connection from the client
-- once the server finishes sendign all datam it would then calculate the loss rate, throughput (after the slowstart phase), store 
-this information in ... and generate a shark-tooth graph containing the first 500 pr_info logs
+\begin{itemize}
+  \item \code{slow\_start}, when the sender is below \code{ssthresh};
+  \item \code{congestion\_avoidance}, during normal Reno additive increase;
+  \item \code{fast\_retransmit}, when TCP enters recovery after duplicate ACKs or SACK;
+  \item \code{loss\_recovery}, when TCP enters loss or congestion-window reduction.
+\end{itemize}
 
+Logging every ACK was too expensive and quickly overwrote the kernel ring buffer. The final version logs every 100th ACK unless the TCP phase changes. A sequence number was added to detect missing log records.
 
+\subsection{Handling Kernel Ring-Buffer Overwrite}
 
-\subsection{Physical Setup}
-- server and client connected to the same router (within the same subnet)
-- so there is no random bottleneck in between the client and the server
-- the only bottleck that we will have is the qdisc TBF set in front of the server
+The first custom-module runs still produced misleading traces: for example, a 20 GiB transfer did not appear to start from the expected initial \code{cwnd}. The cause was not TCP behavior, but instrumentation loss. By the time logs were extracted at the end of a transfer, early \code{pr\_info} records had already been overwritten in the kernel ring buffer.
 
+The final server therefore starts a background log extractor. It repeatedly reads \code{dmesg}, appends relevant kernel logs to a context file, clears the ring buffer, and sleeps for a configurable interval. This allowed the project to capture the beginning of the transfer and the phase transitions more reliably. Figure~\ref{fig:ring_buffer} shows the type of broken trace observed before this fix.
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.86\textwidth]{physical_setup2/no_tbf_ring_not_clean.png}
+  \caption{Early custom-CCA trace before reliable ring-buffer extraction. Missing early records made the \code{cwnd} evolution look inconsistent.}
+  \label{fig:ring_buffer}
+\end{figure}
 
+\subsection{Final Automation Pipeline}
 
-\section{Experiment 1: testing Franziska apparoach}
-\subsection{parameters}
-QUEUE_SIZES=(6250, 12500, 25000, 50000, 100000)
-TOKEN_GENERATION_RATES=(250 500 750 1000)
-BURST_SIZES=(5840 12500 25000 50000 100000)
+The final experiment driver is \code{client\_server/run.sh}. It performs the following steps for each run:
 
-\subsection{Changes to the original cca script}
-- compare "client_server/custom_cca/my_cca.c" and "https://github.com/torvalds/linux/blob/master/net/ipv4/tcp_cong.c" 
-- write brifely with small code snippets of how we cap the cwnd
+\begin{enumerate}
+  \item reset the root qdisc on the server interface;
+  \item install a Linux TBF qdisc with the chosen rate, burst, and queue limit;
+  \item disable TSO and GSO using \code{ethtool};
+  \item rebuild, sign, unload, and reload \code{my\_cca} with the requested \code{cwnd\_limit};
+  \item start the Python server with the selected TCP congestion-control algorithm;
+  \item start the kernel-log extractor and the optional TBF enqueue-rate extractor;
+  \item wait for one client connection and send the configured amount of data;
+  \item filter kernel logs for the specific client IP and ephemeral port;
+  \item generate a \code{cwnd} plot and JSON summaries for throughput, RTT, phase counts, and loss-related events.
+\end{enumerate}
 
-\subsection{Finding the empirical values: algorithms}
-- How do we do it?
-=> automation script that does this for us. Initially, the automation script will run
-normal TCP New Reno, records the cwnd (our cca works on top of TCP Reno, we just added pr_info
-to the suitable location), and calculate the average cwnd (mountain edge of the shark-tooth graph)
-=> generally this average cwnd is "very close" to the empirical cwnd, we thus decreased the cwnd cap by 1,
-re-run the server client communication again, to see whethre the loss rate has decreased or not
-=> the "loss rate" could be set by the user when running the server script (for queue_sizes to 12500 we are using loss rate of 0.20
-and for queue-sizes from 25000 we are using loss rate of 0.05)
+The server sends generated bytes in bulk, with \code{SO\_MAX\_PACING\_RATE} set to 1 Gbit/s by default. Unless otherwise stated, the experiments use 1 GiB transfers, a base RTT around 0.4 ms, and MSS 1460 B. The physical topology is an isolated local network with the server and client in the same subnet. The intended bottleneck is therefore the server egress TBF, not the router or the wider Internet.
 
+\subsection{Receiver-Side Window Clamp}
 
-\subsection{different burst sizes}
+The sender-side cap is useful for experimentation, but a realistic client cannot normally install a custom congestion-control module on a remote server. Therefore the project also tested whether the same behavior can be induced from the client by limiting \code{rwnd}. The Python client uses:
 
-Take a look at "client_server/report4"
+\[
+\code{SO\_RCVBUF} = \code{TCP\_WINDOW\_CLAMP} = W_{\mathrm{target}}.
+\]
 
-From the experiments above, we have seen that the assumtoion holds, where when the queue_size is small, epirical
-cwnd indeed achieved a better throughput. However, in all cases algorithm1 were always overestikamting the cwnd size
-in fact, TCP Reno performed better. 
+Since the sender transmits according to \(\min(\code{cwnd}, \code{rwnd})\), advertising a smaller receive window should constrain the sender even when the server-side \code{cwnd} cap is disabled.
 
+\section{Experiment 1: Sender-Side CWND Capping}
 
-\subsection{Cause of the inaccurate estimation}
-- R_arrival rate not taken into account
-- algorithm2 defined the calculaytion of the optimal cwnd as BDP + queue_size - 1MSS, 
-however, when the packet from the tcp application arrives faster than the token_generation_rate, 
-it will accumulate in the qdisc queue. When we are calculating the optimal cwnd size, we need to 
-subtract this accumulated packets from the real queue size (as this is the actual amount that 
-we could increase the cwnd to accumulate)
-Essentially 
-BDP- how many bytes can be on fly for each RTT
-Q_penality - how many bytes accumulates in the qdisc queue in each RTT
-Q_effective - how many bytes can the queue still accumulate [11:42]Rather the problem that was, when we set the cwnd so big, TCP was sending data to the TBF so fast that, the queue gets fillies up too quickly, causing the empirical cwnd to be usually smaller than the theoretical cwnd. Because we overestimated.
+\subsection{Parameter Sweep}
 
-- the current setup allows the sender to send set amoutn of data in BULK and "as fast as possible capped in 1Gib"
-meaning that the enquesing rate is generally faster than the token generation rate
-- Taking this into account, we proposed a more suitable algroithm that could be used under our current setup
-BDP = R_tbf * RTT_base
+The main sweep varied the TBF queue size, burst size, and token generation rate:
 
-Q_tbf = burst_penalty
-      = max(0, (R_arrival - R_tbf) * RTT_base)
-      = BDP * max(0, R_arrival / R_tbf - 1)
+\begin{itemize}
+  \item \(Q_{\mathrm{config}} \in \{6250, 12500, 25000, 50000, 100000\}\) bytes;
+  \item \(B \in \{5840, 12500, 25000, 50000, 100000\}\) bytes;
+  \item \(R_{\mathrm{tbf}} \in \{250, 500, 750, 1000\}\) Mbit/s.
+\end{itemize}
 
-if Q_tbf <= Q_config:
-    Q_effective = Q_config - Q_tbf
-    cwnd = floor((BDP + Q_effective - MSS) / MSS)
+For each configuration, four strategies were compared:
 
+\begin{itemize}
+  \item uncapped Reno-like behavior using \code{my\_cca} with \code{cwnd\_limit = 0};
+  \item an empirical cap found by decreasing from the observed Reno top-\code{cwnd} until loss was acceptable;
+  \item Friedli's original \(\bdp + Q_{\mathrm{config}} - \mss\) cap;
+  \item a plain BDP cap, \(\lfloor \bdp/\mss \rfloor\).
+\end{itemize}
 
-\subsection{burst size 50000 to test the penality apparoach}
+The empirical loss threshold was 0.20 for the two smallest queue sizes and 0.05 for larger queues. This change should be kept in mind when comparing empirical choices across queue-size groups.
 
-=> because in Frabziska's report it stated that "increasing the burst size does not influence throughput under the optimal cwnd algorithms"
-=> burst size 50000 bytes
-=> How did we do this?: reverse calculate using the empirical value 
+\subsection{Early Sanity Check: Large Queue}
 
+The first stable setup used \(R_{\mathrm{tbf}} = 1\) Gbit/s, burst size 1 MB, and \(Q_{\mathrm{config}} = 50000\) B. With RTT around 0.4 ms, the BDP is about 50000 B, so the original formula predicts a cap close to 66--67 MSS-sized segments. The measured result matched this prediction: \code{cwnd\_limit} around 66--67 produced a flat and stable trace.
 
-\subsection{clamping rwnd from the client side}
-=> now we know the empirical rate, since we want to establish this cwnd capped on the server side
-from the TCP handshake phase, we disabled the cwnd cap on the server side to test whether 
-we could still achive the empirical throughput . Take a look at "client_server/report3"
+However, the throughput improvement over Reno was small: roughly 9.20 s for the capped runs versus about 9.51 s on average for Reno-like runs when sending 1 GiB. This is not a contradiction of the ns-3 work. Friedli's results already showed that once the TBF queue reaches approximately the BDP, Reno can often keep the outgoing link busy despite its sawtooth. The physical setup first validated this large-queue regime before moving to smaller queues.
 
+\subsection{Sweep Results}
 
-\section{Experiment 2: Estimation of the rwnd from the client side}
-Since we know that it is possible to limit the cwnd by setting the rwnd from the client side,
-we would also like to see whether it is possible for us to estimate this rwnd from the
-client side (before we were testing the throughput from the server side and manually
-trying to find out the empirical value)
+Across all 100 queue/burst/rate points, the empirical cap was the most reliable high-throughput choice. The generated analysis in \code{client\_server/report4} reports the following aggregate metrics:
 
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lrr}
+    \toprule
+    Strategy & Mean throughput (MiB/s) & Best-throughput wins \\
+    \midrule
+    TCP Reno & 55.92 & 15 \\
+    Empirical cap & 67.00 & 60 \\
+    \(\bdp + Q_{\mathrm{config}} - \mss\) & 55.75 & 12 \\
+    \(\bdp\) & 56.13 & 13 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Aggregate result over the 100 physical TBF configurations parsed in \code{report4}.}
+  \label{tab:strategy_summary}
+\end{table}
 
+The gain is concentrated in small queues. Table~\ref{tab:queue_gain} shows the average empirical-over-Reno throughput gain by queue size.
 
-\subsection{Using WeHe as a replay server again}
-With the Base Setup, it is now possible for us to extract the correct cwnd
-however, with the token generation that we currently have, the WeHe replay rate cannot really fill up
-the TBF queue
+\begin{table}[H]
+  \centering
+  \begin{tabular}{rr}
+    \toprule
+    Queue size (B) & Mean empirical gain over Reno (MiB/s) \\
+    \midrule
+    6250 & 36.44 \\
+    12500 & 15.39 \\
+    25000 & 1.23 \\
+    50000 & 0.18 \\
+    100000 & 2.15 \\
+    \bottomrule
+  \end{tabular}
+  \caption{The benefit of a window cap is largest when the TBF queue is small.}
+  \label{tab:queue_gain}
+\end{table}
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\textwidth]{../client_server/report4/images/strategy_throughput_by_queue.png}
+  \caption{Mean throughput by strategy and queue size. Empirical capping dominates in small queues, while all strategies converge for larger queues.}
+  \label{fig:strategy_throughput}
+\end{figure}
 
+The largest positive empirical-over-Reno case occurred with \(Q_{\mathrm{config}} = 6250\) B, burst size 12500 B, and \(R_{\mathrm{tbf}} = 750\) Mbit/s: empirical capping reached 79.46 MiB/s while Reno reached only 10.47 MiB/s. The largest negative case was small: with \(Q_{\mathrm{config}} = 25000\) B, burst size 25000 B, and \(R_{\mathrm{tbf}} = 1000\) Mbit/s, empirical capping reached 104.69 MiB/s while Reno reached 108.95 MiB/s.
 
-\subsection{Cumulative bytes arrival}
-Can estimate the BDP when we have balanced queue size && burst, however
-only BDP, e cannot estimate the empirical rwnd because the r_arrival rate
-is not taken into account
-=> the setup: 1,2ms (so 3RTTS) of replays where the server sends as fast as possible capped
-at 1Gib. take a look at "client_server_cul"
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.92\textwidth]{../client_server/report4/images/empirical_gain_over_reno_heatmap.png}
+  \caption{Empirical cap gain over Reno. The high-gain region is concentrated at small queues and high token generation rates.}
+  \label{fig:empirical_heatmap}
+\end{figure}
 
+\subsection{Why the Original Formula Overestimated}
 
+The original algorithm assumes that the configured TBF queue can be used as extra in-flight capacity:
 
-\subsection{Receiver-Assisted TBF Enqueue-Rate Estimation}
+\[
+W = \bdp + Q_{\mathrm{config}} - \mss .
+\]
 
+This is accurate when the packet arrival rate into the TBF is close to the token generation rate. In the physical setup, however, the server application sends in bulk and the TCP stack can enqueue into the TBF faster than the qdisc drains. Let \(R_{\mathrm{arrival}}\) be the short-window rate at which bytes arrive at the TBF enqueue path. When \(R_{\mathrm{arrival}} > R_{\mathrm{tbf}}\), the queue grows during one RTT by approximately:
 
+\[
+Q_{\mathrm{tbf}} =
+\max(0, (R_{\mathrm{arrival}} - R_{\mathrm{tbf}}) RTT_{\mathrm{base}}).
+\]
 
+This queue growth is not free buffer space. It is a burst penalty that must be subtracted from the configured queue:
 
+\[
+Q_{\mathrm{effective}} = \max(0, Q_{\mathrm{config}} - Q_{\mathrm{tbf}}).
+\]
+
+The revised estimate is therefore:
+
+\[
+W =
+\left\lfloor
+\frac{\bdp + Q_{\mathrm{effective}} - \mss}{\mss}
+\right\rfloor .
+\]
+
+When \(Q_{\mathrm{tbf}} > Q_{\mathrm{config}}\), even one RTT of enqueue/drain mismatch does not fit into the queue. The project used a conservative reduced-BDP branch:
+
+\[
+\bdp_{\mathrm{usable}} =
+\bdp \cdot \min\left(1, \frac{Q_{\mathrm{config}}}{Q_{\mathrm{tbf}}}\right),
+\qquad
+W =
+\left\lfloor
+\frac{\bdp_{\mathrm{usable}} - \mss}{\mss}
+\right\rfloor .
+\]
+
+This model explains why \(\bdp + Q_{\mathrm{config}} - \mss\) was too aggressive in many small-queue physical runs. For example, with \(R_{\mathrm{tbf}} = 500\) Mbit/s, RTT \(=0.4\) ms, and \(Q_{\mathrm{config}} = 50000\) B, the BDP is 25000 B. If packets arrive at the TBF near 1 Gbit/s, then the burst penalty is also around 25000 B. The effective queue is therefore about 25000 B, and the expected cap becomes roughly:
+
+\[
+\left\lfloor
+\frac{25000 + 25000 - 1460}{1460}
+\right\rfloor
+= 33,
+\]
+
+not 50. This matches the empirical region observed in the physical tests.
+
+\subsection{Remaining Model Mismatch}
+
+The arrival-aware correction is an improvement, but not a complete model. In the very small queue cases, especially \(Q_{\mathrm{config}} = 6250\) B, the reduced-BDP branch can underpredict the best empirical \code{cwnd}. For example, some 500 Mbit/s and 250 Mbit/s runs were best around \code{cwnd} 7 and 5 respectively, while the conservative formula predicted smaller values. The reason is that \(R_{\mathrm{arrival}}\) is not a stable whole-transfer constant. The relevant value is a short burst into the TBF over approximately one base RTT, and this value depends on offloads, pacing, qdisc behavior, and the current TCP phase.
+
+This also fixes an earlier mis-explanation in the outline: the plateau and poor performance were not primarily caused by the receiver buffer being full. The receiver-side tests and \code{rwnd} logs showed that flow control was not the main limiter. The dominant issue was the interaction between sender-side TBF enqueue bursts, qdisc queue occupancy, NIC behavior, and TCP loss recovery.
+
+\section{Experiment 2: Receiver-Side RWND Control}
+
+\subsection{Motivation}
+
+Directly capping server-side \code{cwnd} is useful for controlled experiments, but a deployable receiver-side system should not require modifying the sender's kernel. Since TCP sends according to \(\min(\code{cwnd}, \code{rwnd})\), the client can attempt to impose the same effective cap by advertising a small receive window.
+
+\subsection{Method}
+
+For each selected configuration, the server was run with \code{my\_cca} but with \code{cwnd\_limit = 0}, so the server-side cap was disabled. The client then ran:
+
+\[
+\code{python3 Client/client.py --rwnd-segments <empirical-cwnd>}.
+\]
+
+The client script converts the segment count to bytes using MSS 1460 B, sets \code{SO\_RCVBUF}, and sets \code{TCP\_WINDOW\_CLAMP}. This forces the sender's effective window to be limited by the advertised receive window.
+
+\subsection{Results}
+
+The receiver-side cap reproduced the sender-side empirical behavior in most cases. Table~\ref{tab:rwnd_examples} shows representative examples from \code{report3/RWND.md}.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{rrrrr}
+    \toprule
+    Queue (B) & \(R_{\mathrm{tbf}}\) (Mbit/s) & Empirical \code{cwnd} & Sender cap (MiB/s) & Client \code{rwnd} cap (MiB/s) \\
+    \midrule
+    6250 & 500 & 7 & 56.94 & 56.23 \\
+    12500 & 500 & 9 & 56.58 & 56.60 \\
+    25000 & 750 & 18 & 84.34 & 85.27 \\
+    50000 & 500 & 33 & 56.79 & 56.75 \\
+    100000 & 1000 & 102 & 111.98 & 111.70 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Representative receiver-side \code{rwnd} tests. Advertising the empirical window from the client closely matches sender-side \code{cwnd} capping.}
+  \label{tab:rwnd_examples}
+\end{table}
+
+Some small-window cases are sensitive: for example, increasing \code{rwnd} from 9 to 10 segments in the 750 Mbit/s, 6250 B queue case caused a large drop-rate increase and throughput collapse. This confirms that receiver-side control is powerful enough to reproduce the cap, but also that the selected cap must be accurate.
+
+\section{Experiment 3: Toward Receiver-Side Estimation}
+
+\subsection{Relation to Policing-Rate Inference}
+
+The natural final system would combine the two previous papers as follows:
+
+\begin{enumerate}
+  \item the receiver infers \(R_{\mathrm{tbf}}\) from arrivals, using a method such as cumulative-byte differentiation;
+  \item the receiver estimates RTT;
+  \item the receiver computes a target window;
+  \item the receiver advertises that target through \code{rwnd}.
+\end{enumerate}
+
+The physical experiments support steps 3 and 4, but show that step 1 is not sufficient by itself. Inferring the output policing rate tells us the long-term bottleneck rate. It does not tell us how quickly the sender is enqueueing into the TBF, nor how much of the configured qdisc queue is already consumed by burst pressure.
+
+\subsection{Cumulative Arrival at the Receiver}
+
+The cumulative-arrival method from Rimkevicius's work is still useful for estimating the bottleneck rate under balanced conditions. If the flow is already constrained near the token generation rate, the slope of cumulative received bytes approximates \(R_{\mathrm{tbf}}\). However, the empirical \code{rwnd} needed in the physical setup also depends on \(R_{\mathrm{arrival}}\). The receiver only observes delivered bytes after the TBF; it does not directly observe how fast the sender tried to enqueue packets before the TBF.
+
+This explains why a receiver can estimate the BDP but still fail to choose the empirical receive window in aggressive bulk-send cases. The hidden variable is not the delivered rate, but the enqueue pressure at the qdisc.
+
+\subsection{Receiver-Assisted Enqueue-Rate Estimation}
+
+The project also added a server-side \code{bpftrace} extractor that samples \code{tbf\_enqueue()} and writes short-window \(R_{\mathrm{arrival}}\) estimates. This was useful for analysis, but it is not a deployable receiver-only solution: it requires instrumentation on the sender or the bottleneck host. Moreover, whole-transfer average \(R_{\mathrm{arrival}}\) tends to collapse toward the TBF output rate, while the model needs the short burst rate over approximately one base RTT.
+
+Therefore, a practical receiver-side estimator remains future work. It should estimate not only the policing rate but also a safety margin for sender burstiness, perhaps by observing arrival bursts, loss recovery, and short-term slope percentiles rather than relying only on median delivered throughput.
 
 \section{Limitations}
-=> cannot set the RTT in the physical setup (the router could only set queue sizes... does not have 
-OS that could run qdisc)
 
+The project validates the core idea in a real Linux setup, but several limitations remain.
 
+First, the bottleneck was implemented as a Linux server-egress qdisc. Real ISP policing is usually downstream of the sender and may be ingress from the user's perspective. Linux can emulate ingress shaping through \code{ifb}, but early tests with \code{ifb0} did not expose a clean backlog signal, so the stable experiments used server egress.
 
+Second, RTT was very small and difficult to control precisely in the physical LAN. Some experiments attempted to add \code{netem} delay, but queue placement and interaction between \code{netem} and TBF changed the results. More complete validation should repeat the sweep across controlled RTTs.
 
+Third, the experiments focus on Reno-like behavior through \code{my\_cca}. Cubic and BBR were studied in ns-3 but not fully reproduced in the physical setup.
 
+Fourth, the empirical cap search used loss thresholds that differed by queue range. This was practical during experimentation, but a final system should define a single objective function balancing throughput, latency, and loss.
 
-\section{Conclusions}
+Finally, the TBF queue, NIC driver, offload settings, and Linux pacing interact in ways that are hard to reduce to one closed-form formula. Disabling TSO and GSO improved interpretability, but it also means the setup is not exactly the default production Linux network path.
+
+\section{Conclusion}
+
+This project implemented a physical Linux testbed to evaluate whether ns-3 window-control algorithms for TBF-policed traffic transfer to real machines. The answer is yes, but with an important correction. Capping the effective TCP window is a valid way to avoid repeated TBF loss recovery, and the client can impose such a cap through the advertised receive window. The empirical cap was the best strategy in 60 of 100 tested queue/burst/rate configurations and improved average throughput by 36.44 MiB/s over Reno in the smallest queue group.
+
+However, the original \(\bdp + Q_{\mathrm{config}} - \mss\) formula is often too optimistic in the physical setup. The configured TBF queue is not fully available when packets arrive at the qdisc faster than tokens are generated. A burst penalty based on \(R_{\mathrm{arrival}} - R_{\mathrm{tbf}}\) explains much of the gap between theory and measurement. This also clarifies why the previous ns-3 result is not simply wrong: the physical path exposes an additional enqueue-rate effect that must be modeled or estimated.
+
+The most promising direction is a receiver-driven system that estimates the policing rate, chooses a conservative receive-window cap, and adapts it based on observed loss and burstiness. The receiver-side \code{rwnd} experiments show that this control path works; the remaining challenge is robustly estimating the right value without sender-side instrumentation.
+
+\section*{References}
+
+\begin{enumerate}
+  \item Franziska Friedli, \emph{Revisiting Traffic Congestion Control Protocols at the Last Mile}, EPFL NAL Semester Project, 2025.
+  \item Martynas Rimkevicius, \emph{Inference of Traffic Differentiation Policing Rate}, EPFL NAL Semester Project, 2025.
+  \item Tobias Flach et al., \emph{An Internet-Wide Analysis of Traffic Policing}, ACM SIGCOMM, 2016.
+  \item Fangfan Li et al., \emph{A Large-Scale Analysis of Deployed Traffic Differentiation Practices}, ACM SIGCOMM, 2019.
+\end{enumerate}
 
 \end{document}

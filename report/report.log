@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.5.22)  10 JUN 2026 01:22
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.5.22)  10 JUN 2026 01:52
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -479,28 +479,28 @@ Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 28
 File: l3backend-pdftex.def 2024-01-04 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count313
 \l__pdf_internal_box=\box65
-)
-No file report.aux.
+) (./report.aux)
 \openout1 = `report.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 56.
-LaTeX Font Info:    ... okay on input line 56.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 56.
-LaTeX Font Info:    ... okay on input line 56.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 56.
-LaTeX Font Info:    ... okay on input line 56.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 56.
-LaTeX Font Info:    ... okay on input line 56.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 56.
-LaTeX Font Info:    ... okay on input line 56.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 56.
-LaTeX Font Info:    ... okay on input line 56.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 56.
-LaTeX Font Info:    ... okay on input line 56.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 56.
-LaTeX Font Info:    ... okay on input line 56.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 56.
-LaTeX Font Info:    ... okay on input line 56.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 45.
+LaTeX Font Info:    ... okay on input line 45.
+
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
 *geometry* verbose mode - [ preamble ] result:
@@ -562,407 +562,59 @@ Package caption Info: longtable package is loaded.
 Package: ltcaption 2021/01/08 v1.4c longtable captions (AR)
 )
 Package caption Info: End \AtBeginDocument code.
-Package hyperref Info: Link coloring ON on input line 56.
+Package hyperref Info: Link coloring ON on input line 45.
+ [1
 
-No file report.toc.
+{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-t1.enc}] (./report.toc)
 \tf@toc=\write5
 \openout5 = `report.toc'.
 
-[1
-
-{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-t1.enc}]
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:130: Misplaced alignment tab character &.
-l.130 ...ing us to not able to see an ideal time &
-                                                  & cwnd shark-tooth shaped ...
-I can't figure out why you would want to use a tab mark
-here. If you just want an ampersand, the remedy is
-simple: Just type `I\&' now. But if some right brace
-up above has ended a previous alignment prematurely,
-you're probably due for more error messages, and you
-might try typing `S' now just to see what is salvageable.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:130: Misplaced alignment tab character &.
-l.130 ...ng us to not able to see an ideal time &&
-                                                   cwnd shark-tooth shaped g...
-I can't figure out why you would want to use a tab mark
-here. If you just want an ampersand, the remedy is
-simple: Just type `I\&' now. But if some right brace
-up above has ended a previous alignment prematurely,
-you're probably due for more error messages, and you
-might try typing `S' now just to see what is salvageable.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:131: Missing $ inserted.
-<inserted text> 
-                $
-l.131 (Figure report/images/physical_
-                                     setup1/WeHe_youtube.png)
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:132: Missing $ inserted.
-<inserted text> 
-                $
-l.132 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:136: Missing $ inserted.
-<inserted text> 
-                $
-l.136 script print pr_
-                      info everytime it receives an ACK
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:147: Missing $ inserted.
-<inserted text> 
-                $
-l.147 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-Overfull \hbox (187.89937pt too wide) in paragraph at lines 134--147
-\OML/cmm/m/it/10 inaddition; wedecidedtobuildoursimpleclientandserversetup; aswecouldnotcontrolthesendingrate; andtheamountofdatasentbytheWehereplay \OT1/cmr/m/n/10 =\OML/cmm/m/it/10 >
- []
-
-
-Overfull \hbox (522.69308pt too wide) in paragraph at lines 134--147
-\OML/cmm/m/it/10 howtoloadourownccamodules\OT1/cmr/m/n/10 ?\OML/cmm/m/it/10 wheredidIgetthisinfofrom:::welearnthowtodothispartiallyfromthisdocumentation::toexplainsimply; ccaprovidesastructthatallowedastomanuallyspecifythefunctiontobecalledduringcca \OT1/cmr/m/n/10 =\OML/cmm/m/it/10 >
- []
-
-
-Overfull \hbox (208.9303pt too wide) in paragraph at lines 134--147
-\OML/cmm/m/it/10 howeverevenaftersettingthiswewerenotabletogettheidealshark \OMS/cmsy/m/n/10 ^^@ \OML/cmm/m/it/10 toothshapeddiagram\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 Figurereport=images=physical[]etup\OT1/cmr/m/n/10 2\OML/cmm/m/it/10 =no[]bf[]ing[]ot[]lean:png\OT1/cmr/m/n/10 ) \OMS/cmsy/m/n/10 ^^@
- []
-
-
-Overfull \hbox (86.39835pt too wide) in paragraph at lines 134--147
-\OML/cmm/m/it/10 Figureshowsthecasewhenwetestedourserversending\OT1/cmr/m/n/10 20\OML/cmm/m/it/10 Gbtotheclient; asitcanbeseentheslowstartdidnotstartfromcwnd \OT1/cmr/m/n/10 ==
- []
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:151: Missing $ inserted.
-<inserted text> 
-                $
-l.151 - Everytime pr_
-                     info is called, the log will be written to ... which is...
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:156: Misplaced alignment tab character &.
-l.156 ...ry ACK" to "whenever the phase changes" &
-                                                  & "every 100 ACKs", also
-I can't figure out why you would want to use a tab mark
-here. If you just want an ampersand, the remedy is
-simple: Just type `I\&' now. But if some right brace
-up above has ended a previous alignment prematurely,
-you're probably due for more error messages, and you
-might try typing `S' now just to see what is salvageable.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:156: Misplaced alignment tab character &.
-l.156 ...y ACK" to "whenever the phase changes" &&
-                                                   "every 100 ACKs", also
-I can't figure out why you would want to use a tab mark
-here. If you just want an ampersand, the remedy is
-simple: Just type `I\&' now. But if some right brace
-up above has ended a previous alignment prematurely,
-you're probably due for more error messages, and you
-might try typing `S' now just to see what is salvageable.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:158: Missing $ inserted.
-<inserted text> 
-                $
-l.158 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-Overfull \hbox (116.47232pt too wide) in paragraph at lines 150--158
-\T1/cmr/m/n/10 - The cause of the pre-vi-ous is-sue was due to the ring buffer - Ev-ery-time pr$[]\OML/cmm/m/it/10 nfoiscalled; thelogwillbewrittento:::whichisaringbuffer \OMS/cmsy/m/n/10 ^^@
- []
-
-
-Overfull \hbox (139.6796pt too wide) in paragraph at lines 150--158
-\OML/cmm/m/it/10 Sincewewereprintingpr[]nfoeverytimereceivinganACK; theringwouldbefilledupquicklyandoverwritetheexisitinglogsinthebuffer\OMS/cmsy/m/n/10 ^^@ \OML/cmm/m/it/10 >
- []
-
-
-Overfull \hbox (282.0908pt too wide) in paragraph at lines 150--158
-\OML/cmm/m/it/10 a\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 cleaningprocess\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 wasrequired \OMS/cmsy/m/n/10 ^^@ \OML/cmm/m/it/10 Thuswedefinedabackendprocessthatwouldbecalledwhentheserverstartsrunning; whicbthisprocesswillcleanthelogincertaininterval \OMS/cmsy/m/n/10 ^^@
- []
-
-
-Overfull \hbox (435.38141pt too wide) in paragraph at lines 150--158
-\OML/cmm/m/it/10 inaddition; wemodifiedthesapingratefrom\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 everyACK\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 to\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 wheneverthephasechanges\OT1/cmr/m/n/10 ""\OML/cmm/m/it/10 every\OT1/cmr/m/n/10 100\OML/cmm/m/it/10 ACKs\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 ; alsoaddedsequencenumbertothepr[]nfotoreducetheliklihoodofareocrdedpacketbeingoverwritten$ 
- []
-
-[2]
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:166: Missing $ inserted.
-<inserted text> 
-                $
-l.166 Note: look at client_
-                           server, my explanation below maybe on the old ver...
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:176: Missing $ inserted.
-<inserted text> 
-                $
-l.176 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-Overfull \hbox (153.42435pt too wide) in paragraph at lines 166--176
-[]\T1/cmr/m/n/10 Note: look at client$[]\OML/cmm/m/it/10 erver; myexplanationbelowmaybeontheoldversionorunclear:ModifyitsothatitmatcheswiththenewestversionNote \OT1/cmr/m/n/10 :
- []
-
-
-Overfull \hbox (468.10347pt too wide) in paragraph at lines 166--176
-\OML/cmm/m/it/10 Alsosomeexplanationsmaynpwbeveryclear; somodifyittobemorespecific \OMS/cmsy/m/n/10 ^^@ \OML/cmm/m/it/10 run:sh \OT1/cmr/m/n/10 =\OML/cmm/m/it/10 > setsthethesrcport; srcip; CWNDanddatasizetobesent:Couldselectwhetherwewnattouse\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 my[]ca\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 or\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 reno\OT1/cmr/m/n/10 "(\OML/cmm/m/it/10 whenCWND \OT1/cmr/m/n/10 ==
- []
-
-
-Overfull \hbox (2009.21599pt too wide) in paragraph at lines 166--176
-\OT1/cmr/m/n/10 0\OML/cmm/m/it/10 ; \OT1/cmr/m/n/10 "\OML/cmm/m/it/10 reno\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 willbeused\OT1/cmr/m/n/10 )\OML/cmm/m/it/10 :TheTBFparameterswouldalsobespecifiedhere: \OMS/cmsy/m/n/10 ^^@ \OML/cmm/m/it/10 whenrun:shisexecuted; thescriptwillfirstlycheckunloadthecurrent\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 my[]ca\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 fromthesystemitwillthenloadtheCWNDtotheccascript; recompileitandadditintothesystemselectionthescript; onceseeingthat\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 my[]ca\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 existsinthesolution; willthensetuptheaqdisc\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 outgress; sofromservertoclient\OT1/cmr/m/n/10 )\OML/cmm/m/it/10 TBFinfrontoftheservertosimulatetheendpointbottleneck\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 normallythissgouldbesetontheclientside; buttosetaingressqdiscontheclientsidewehavetocreateafakelistenerinfronttheclienttobuildserver \OT1/cmr/m/n/10 =\OML/cmm/m/it/10 >
- []
-
-
-Overfull \hbox (203.10254pt too wide) in paragraph at lines 166--176
-\OML/cmm/m/it/10 fakelistener[] \OT1/cmr/m/n/10 =\OML/cmm/m/it/10 > client\OT1/cmr/m/n/10 )\OML/cmm/m/it/10 whichwasnotidealthescriptwillthenstartthesever; whichtheserverwouldstart\OT1/cmr/m/n/10 3\OML/cmm/m/it/10 subprocessrunninginthebackend$ 
- []
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:177: Missing $ inserted.
-<inserted text> 
-                $
-l.177 ...rom ring buffer, search the ones from pr_
-                                                  info and that contains the...
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:184: Missing $ inserted.
-<inserted text> 
-                $
-l.184 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-Overfull \hbox (107.11624pt too wide) in paragraph at lines 177--184
-[]\T1/cmr/m/n/10 - sub-pro-cess 1: log ex-trac-tor => ex-tract the logs from ring buffer, search the ones from pr$[]\OML/cmm/m/it/10 nfoandthatcontainstheportnumber \OMS/cmsy/m/n/10 ^^@
- []
-
-
-Overfull \hbox (265.20518pt too wide) in paragraph at lines 177--184
-\OML/cmm/m/it/10 subprocess\OT1/cmr/m/n/10 2 : \OML/cmm/m/it/10 logcleaner \OT1/cmr/m/n/10 =\OML/cmm/m/it/10 > cleantheringbuffer \OMS/cmsy/m/n/10 ^^@ \OML/cmm/m/it/10 subprocess\OT1/cmr/m/n/10 3 : \OML/cmm/m/it/10 rarrivalextractor \OT1/cmr/m/n/10 =\OML/cmm/m/it/10 > usedtodeterminetheR[]rrivalrate\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 willbeclarifiedlater\OT1/cmr/m/n/10 )\OML/cmm/m/it/10 butnotveryaccurate \OMS/cmsy/m/n/10 ^^@
- []
-
-
-Overfull \hbox (215.23311pt too wide) in paragraph at lines 177--184
-\OML/cmm/m/it/10 NotethattheserverdoesaBULKsend; thatisittriestosendthedata\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 asfastaspossible; cappedat\OT1/cmr/m/n/10 1\OML/cmm/m/it/10 Gib\OT1/cmr/m/n/10 " \OMS/cmsy/m/n/10 ^^@ \OML/cmm/m/it/10 theserverthenwaituntiilaconnectionfromtheclient \OMS/cmsy/m/n/10 ^^@
- []
-
-
-Overfull \hbox (245.6762pt too wide) in paragraph at lines 177--184
-\OML/cmm/m/it/10 oncetheserverfinishessendignalldatamitwouldthencalculatethelossrate; throughput\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 aftertheslowstartphase\OT1/cmr/m/n/10 )\OML/cmm/m/it/10 ; storethisinformationin:::andgenerateashark \OMS/cmsy/m/n/10 ^^@
- []
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:197: Missing $ inserted.
-<inserted text> 
-                $
-l.197 QUEUE_
-            SIZES=(6250, 12500, 25000, 50000, 100000)
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:200: Missing $ inserted.
-<inserted text> 
-                $
-l.200 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-Overfull \hbox (95.8727pt too wide) in paragraph at lines 197--200
-\T1/cmr/m/n/10 QUEUE$[]\OML/cmm/m/it/10 IZES \OT1/cmr/m/n/10 = (6250\OML/cmm/m/it/10 ; \OT1/cmr/m/n/10 12500\OML/cmm/m/it/10 ; \OT1/cmr/m/n/10 25000\OML/cmm/m/it/10 ; \OT1/cmr/m/n/10 50000\OML/cmm/m/it/10 ; \OT1/cmr/m/n/10 100000)\OML/cmm/m/it/10 TOKEN[]ENERATION[]ATES \OT1/cmr/m/n/10 = (2505007501000)\OML/cmm/m/it/10 BURST[]IZES \OT1/cmr/m/n/10 =
- []
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:202: Missing $ inserted.
-<inserted text> 
-                $
-l.202 - compare "client_
-                        server/custom_cca/my_cca.c" and "https://github.com/...
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:204: Missing $ inserted.
-<inserted text> 
-                $
-l.204 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-Overfull \hbox (82.71693pt too wide) in paragraph at lines 202--204
-\T1/cmr/m/n/10 - com-pare "client$[]\OML/cmm/m/it/10 erver=custom[]ca=my[]ca:c\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 and\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 https \OT1/cmr/m/n/10 : \OML/cmm/m/it/10 ==github:com=torvalds=linux=blob=master=net=ipv\OT1/cmr/m/n/10 4\OML/cmm/m/it/10 =tcp[]ong:c\OT1/cmr/m/n/10 " \OMS/cmsy/m/n/10 ^^@
- []
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:208: Missing $ inserted.
-<inserted text> 
-                $
-l.208 ...rks on top of TCP Reno, we just added pr_
-                                                  info
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:214: Missing $ inserted.
-<inserted text> 
-                $
-l.214 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-Overfull \hbox (0.50256pt too wide) in paragraph at lines 206--214
-\T1/cmr/m/n/10 pr$[]\OML/cmm/m/it/10 nfotothesuitablelocation\OT1/cmr/m/n/10 )\OML/cmm/m/it/10 ; andcalculatetheaveragecwnd\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 mountainedgeoftheshark \OMS/cmsy/m/n/10 ^^@ \OML/cmm/m/it/10 toothgraph\OT1/cmr/m/n/10 ) =\OML/cmm/m/it/10 >
- []
-
-
-Overfull \hbox (372.2539pt too wide) in paragraph at lines 206--214
-\OML/cmm/m/it/10 generallythisaveragecwndis\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 veryclose\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 totheempiricalcwnd; wethusdecreasedthecwndcapby\OT1/cmr/m/n/10 1\OML/cmm/m/it/10 ; re \OMS/cmsy/m/n/10 ^^@ \OML/cmm/m/it/10 runtheserverclientcommunicationagain; toseewhethrethelossratehasdecreasedornot \OT1/cmr/m/n/10 =\OML/cmm/m/it/10 >
- []
-
-
-Overfull \hbox (103.44534pt too wide) in paragraph at lines 206--214
-\OML/cmm/m/it/10 the\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 lossrate\OT1/cmr/m/n/10 "\OML/cmm/m/it/10 couldbesetbytheuserwhenrunningtheserverscript\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 forqueue[]izesto\OT1/cmr/m/n/10 12500\OML/cmm/m/it/10 weareusinglossrateof\OT1/cmr/m/n/10 0\OML/cmm/m/it/10 :\OT1/cmr/m/n/10 20\OML/cmm/m/it/10 andforqueue \OMS/cmsy/m/n/10 ^^@
- []
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:220: Missing $ inserted.
-<inserted text> 
-                $
-l.220 ...e assumtoion holds, where when the queue_
-                                                  size is small, epirical
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:223: Missing $ inserted.
-<inserted text> 
-                $
-l.223 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-Overfull \hbox (676.76266pt too wide) in paragraph at lines 220--223
-\T1/cmr/m/n/10 From the ex-per-i-ments above, we have seen that the as-sum-toion holds, where when the queue$[]\OML/cmm/m/it/10 izeissmall; epiricalcwndindeedachievedabetterthroughput:However; inallcasesalgorithm\OT1/cmr/m/n/10 1\OML/cmm/m/it/10 werealwaysoverestikamtingthecwndsizeinfact; TCPRenoperformedbetter:$ 
- []
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:226: Missing $ inserted.
-<inserted text> 
-                $
-l.226 - R_
-          arrival rate not taken into account
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:236: Missing $ inserted.
-<inserted text> 
-                $
-l.236 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-Overfull \hbox (35.39877pt too wide) in paragraph at lines 226--236
-\T1/cmr/m/n/10 - R$[]\OML/cmm/m/it/10 rrivalratenottakenintoaccount \OMS/cmsy/m/n/10 ^^@ \OML/cmm/m/it/10 algorithm\OT1/cmr/m/n/10 2\OML/cmm/m/it/10 definedthecalculaytionoftheoptimalcwndasBDP \OT1/cmr/m/n/10 + \OML/cmm/m/it/10 queue[]ize \OMS/cmsy/m/n/10 ^^@
- []
-
-
-Overfull \hbox (999.46649pt too wide) in paragraph at lines 226--236
-\OT1/cmr/m/n/10 1\OML/cmm/m/it/10 MSS; however; whenthepacketfromthetcpapplicationarrivesfasterthanthetoken[]eneration[]ate; itwillaccumulateintheqdiscqueue:Whenwearecalculatingtheoptimalcwndsize; weneedtosubtractthisaccumulatedpacketsfromtherealqueuesize\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 asthisistheactualamountthatwecouldincreasethecwndtoaccumulate\OT1/cmr/m/n/10 )\OML/cmm/m/it/10 EssentiallyBDP \OMS/cmsy/m/n/10 ^^@
- []
-
-
-Overfull \hbox (72.43736pt too wide) in paragraph at lines 226--236
-\OML/cmm/m/it/10 howmanybytescanbeonflyforeachRTTQ[]enality \OMS/cmsy/m/n/10 ^^@ \OML/cmm/m/it/10 howmanybytesaccumulatesintheqdiscqueueineachRTTQ[]ffective \OMS/cmsy/m/n/10 ^^@
- []
-
-
-Overfull \hbox (766.15746pt too wide) in paragraph at lines 226--236
-\OML/cmm/m/it/10 howmanybytescanthequeuestillaccumulate\OT1/cmr/m/n/10 [11 : 42]\OML/cmm/m/it/10 Rathertheproblemthatwas; whenwesetthecwndsobig; TCPwassendingdatatotheTBFsofastthat; thequeuegetsfilliesuptooquickly; causingtheempiricalcwndtobeusuallysmallerthanthetheoreticalcwnd:Becauseweoverestimated:$ 
- []
-
-[3]
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:270: Misplaced alignment tab character &.
-l.270 ...he BDP when we have balanced queue size &
-                                                  & burst, however
-I can't figure out why you would want to use a tab mark
-here. If you just want an ampersand, the remedy is
-simple: Just type `I\&' now. But if some right brace
-up above has ended a previous alignment prematurely,
-you're probably due for more error messages, and you
-might try typing `S' now just to see what is salvageable.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:270: Misplaced alignment tab character &.
-l.270 ...e BDP when we have balanced queue size &&
-                                                   burst, however
-I can't figure out why you would want to use a tab mark
-here. If you just want an ampersand, the remedy is
-simple: Just type `I\&' now. But if some right brace
-up above has ended a previous alignment prematurely,
-you're probably due for more error messages, and you
-might try typing `S' now just to see what is salvageable.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:271: Missing $ inserted.
-<inserted text> 
-                $
-l.271 ...stimate the empirical rwnd because the r_
-                                                  arrival rate
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-/mnt/c/Users/chen2/OneDrive/Desktop/EPFL/MA2/NAL project/AutoExp/NAL_sm/report/report.tex:275: Missing $ inserted.
-<inserted text> 
-                $
-l.275 
-      
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-Overfull \hbox (235.61552pt too wide) in paragraph at lines 270--275
-\T1/cmr/m/n/10 em-pir-i-cal rwnd be-cause the r$[]\OML/cmm/m/it/10 rrivalrateisnottakenintoaccount \OT1/cmr/m/n/10 =\OML/cmm/m/it/10 > thesetup \OT1/cmr/m/n/10 : 1\OML/cmm/m/it/10 ; \OT1/cmr/m/n/10 2\OML/cmm/m/it/10 ms\OT1/cmr/m/n/10 (\OML/cmm/m/it/10 so\OT1/cmr/m/n/10 3\OML/cmm/m/it/10 RTTS\OT1/cmr/m/n/10 )\OML/cmm/m/it/10 ofreplayswheretheserversendsasfastaspossiblecappedat\OT1/cmr/m/n/10 1\OML/cmm/m/it/10 Gib$ 
- []
-
-[4] (./report.aux)
+ [2]
+LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 88.
+ (/usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
+File: t1cmtt.fd 2023/04/13 v2.5m Standard LaTeX font definitions
+) [3]
+<images/physical_setup1/WeHe_youtube.png, id=87, 1806.75pt x 903.375pt>
+File: images/physical_setup1/WeHe_youtube.png Graphic file (type png)
+<use images/physical_setup1/WeHe_youtube.png>
+Package pdftex.def Info: images/physical_setup1/WeHe_youtube.png  used on input line 142.
+(pdftex.def)             Requested size: 391.51021pt x 195.7519pt.
+ [4] [5{/usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-ts1.enc} <./images/physical_setup1/WeHe_youtube.png (PNG copy)>]
+<images/physical_setup2/no_tbf_ring_not_clean.png, id=100, 1656.1875pt x 828.09375pt>
+File: images/physical_setup2/no_tbf_ring_not_clean.png Graphic file (type png)
+<use images/physical_setup2/no_tbf_ring_not_clean.png>
+Package pdftex.def Info: images/physical_setup2/no_tbf_ring_not_clean.png  used on input line 176.
+(pdftex.def)             Requested size: 391.51021pt x 195.7519pt.
+ [6 <./images/physical_setup2/no_tbf_ring_not_clean.png (PNG copy)>] [7]
+<../client_server/report4/images/strategy_throughput_by_queue.png, id=122, 1084.05pt x 578.16pt>
+File: ../client_server/report4/images/strategy_throughput_by_queue.png Graphic file (type png)
+<use ../client_server/report4/images/strategy_throughput_by_queue.png>
+Package pdftex.def Info: ../client_server/report4/images/strategy_throughput_by_queue.png  used on input line 279.
+(pdftex.def)             Requested size: 418.82375pt x 223.37303pt.
+<../client_server/report4/images/empirical_gain_over_reno_heatmap.png, id=124, 1011.78pt x 650.43pt>
+File: ../client_server/report4/images/empirical_gain_over_reno_heatmap.png Graphic file (type png)
+<use ../client_server/report4/images/empirical_gain_over_reno_heatmap.png>
+Package pdftex.def Info: ../client_server/report4/images/empirical_gain_over_reno_heatmap.png  used on input line 288.
+(pdftex.def)             Requested size: 418.82375pt x 269.24854pt.
+ [8 <../client_server/report4/images/strategy_throughput_by_queue.png>] [9 <../client_server/report4/images/empirical_gain_over_reno_heatmap.png>] [10] [11] [12] [13] (./report.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 14828 strings out of 476182
- 247393 string characters out of 5795595
- 1938975 words of memory out of 5000000
- 36573 multiletter control sequences out of 15000+600000
- 564691 words of font info for 46 fonts, out of 8000000 for 9000
+ 14966 strings out of 476182
+ 251123 string characters out of 5795595
+ 1936975 words of memory out of 5000000
+ 36661 multiletter control sequences out of 15000+600000
+ 568185 words of font info for 53 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 94i,11n,93p,405b,452s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx2488.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1200.pfb>
-Output written on report.pdf (4 pages, 163438 bytes).
+ 94i,12n,93p,901b,545s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx2488.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfti1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt1000.pfb>
+Output written on report.pdf (13 pages, 831267 bytes).
 PDF statistics:
- 108 PDF objects out of 1000 (max. 8388607)
- 81 compressed objects within 1 object stream
- 29 named destinations out of 1000 (max. 500000)
- 13 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 245 PDF objects out of 1000 (max. 8388607)
+ 193 compressed objects within 2 object streams
+ 65 named destinations out of 1000 (max. 500000)
+ 33 words of extra memory for PDF output out of 10000 (max. 10000000)
 
