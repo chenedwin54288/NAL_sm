@@ -61,7 +61,7 @@ Project Final Report
 \rule{6cm}{0.4pt}
 
 \vspace{0.5cm}
-{\Large Physical Validation of TCP Window Control under Token-Bucket Policing}
+{\Large }
 
 \vspace{1cm}
 
@@ -153,12 +153,16 @@ path toward a receiver-driven system: first infer \(R_{\mathrm{tbf}}\), then cho
 
 \subsection{What Changes in a Physical Linux Setup}
 
-
-Note: can you try to find a reference to this online, either via the official documentation page or elsewhere?
-The ns-3 model hides several details that matter in Linux. First, a Linux TBF qdisc is an egress queue. 
-It is easy to shape traffic leaving the server, but shaping ingress traffic at the client requires redirecting 
-traffic through an \code{ifb} virtual interface. In this project \testbf{the stable experiments therefore placed the 
-TBF on the server egress path, which emulates the bottleneck seen by server-to-client traffic}.
+The ns-3 model hides several details that matter in Linux. First, Linux traffic control is organized around 
+queueing disciplines, or qdiscs. The \code{tc(8)} manual describes a qdisc as the queue into which the kernel 
+places a packet before handing packets to the network-adapter driver, and distinguishes shaping, which controls 
+outgoing transmission, from policing, which applies to arriving traffic~\cite{tc}. The \code{tc-tbf(8)} manual 
+describes TBF as a traffic-control qdisc that dequeues packets according to token availability and queues packets 
+up to a configured \code{limit} while waiting for tokens~\cite{tctbf}. This matters for our physical setup: applying 
+a TBF to the server's root qdisc naturally shapes server egress traffic. Shaping traffic after it has arrived at the 
+client is not the normal direct use of TBF and would require redirecting ingress traffic through a virtual interface 
+such as \code{ifb}. In this project the stable experiments therefore placed the TBF on the server egress path, which 
+emulates the bottleneck seen by server-to-client traffic while keeping the setup reproducible.
 
 Second, the sender does not place one MTU-sized packet at a time into the qdisc. With TCP Segmentation Offload (TSO) 
 and Generic Segmentation Offload (GSO), the kernel or NIC may handle large segments that are later split into 
@@ -175,10 +179,13 @@ they are extracted and cleared during the transfer.
 
 \subsection{Initial Wehe-Based Attempt}
 
-Note: Make the explanation of WeHe a bit clearer. The WeHe paper is stored in report/existing_works/wehe paper.pdf
-The first implementation attempted to reuse Wehe as a replay source. Wehe is designed to detect traffic differentiation 
-by replaying recorded application flows (normal replay and bit-flipped replay) and comparing throughput across 
-replayed traffic classes. 
+The first implementation attempted to reuse Wehe as a replay source. Wehe is a traffic-differentiation measurement 
+system from Li et al.~\cite{wehe}. Its core technique is record and replay: the authors first record traffic generated 
+by real applications such as YouTube or Netflix, then replay the same packet payloads, sizes, and timings between a 
+mobile client and a Wehe server. Each test compares an original replay, whose payload remains recognizable to 
+deep-packet-inspection devices, with a control replay that preserves the same traffic pattern but bit-inverts the 
+payload to hide the application signature. Wehe then compares the throughput distributions of the original and 
+control replays to decide whether content-based traffic differentiation is present.
 
 However, Wehe was not suitable for the first physical validation step. The replay rate and total transmitted data were 
 not easy to control precisely, and the \code{ss}-based background process used to extract \code{cwnd} could not sample 
@@ -226,9 +233,16 @@ ACK unless the TCP phase changes. A sequence number was added to detect missing 
 The first custom-module runs still produced misleading traces: for example, a 20 GiB transfer did not appear to start 
 from the expected initial \code{cwnd}: 10. The cause was not TCP behavior, but instrumentation loss. By the time logs 
 were extracted at the end of a transfer, early \code{pr\_info} records had already been overwritten in the \textbf{kernel ring buffer}.
-Note: can you specify more about the kernel ring buffer and dmesg from https://man7.org/linux/man-pages/man1/dmesg.1.html? I think the reader
-has to understand what kernel ring buffer is and how it is relevant to pr_info(). We also didn't mention how we logged the info from
-the kernel using pr_info(), so talk briefly about this here.
+
+In Linux kernel code, \code{printk()} and its convenience macros such as \code{pr\_info()} are the standard way to 
+write diagnostic messages from inside the kernel. The Linux kernel documentation states that these messages are 
+written to the kernel log buffer, which is a ring buffer exported to user space through \code{/dev/kmsg}, and that 
+\code{dmesg} is the usual way to read it~\cite{printk}. The \code{dmesg(1)} manual describes \code{dmesg} as the 
+tool used to examine or control the kernel ring buffer, and notes that \code{dmesg --clear} clears it~\cite{dmesg}. 
+In our module, each selected ACK event calls \code{pr\_info()} with the current \code{cwnd}, RTT sample, bytes 
+acknowledged, bytes sent, TCP phase, destination IP, and destination port. Because the log buffer has finite capacity, 
+high-frequency \code{pr\_info()} calls can overwrite older records before the user-space analysis script reads them. 
+This is why the early experiments appeared to miss the beginning of slow start.
 
 
 The final server therefore starts a background log extractor. It repeatedly reads \code{dmesg}, appends relevant 
@@ -301,26 +315,48 @@ For each configuration, four strategies were compared:
 The empirical loss threshold was 0.20 for the two smallest queue sizes and 0.05 for larger queues. This change 
 should be kept in mind when comparing empirical choices across queue-size groups.
 
+\subsection{Empirical Cap Selection}
+
+The empirical cap was not another closed-form formula. It was a measured reference point used to understand what 
+window the physical setup could actually sustain for each TBF configuration. The first step was to run the same 
+configuration with normal Reno-like behavior, using \code{my\_cca} with \code{cwnd\_limit = 0}. From this uncapped run, 
+the analysis extracted the post-slow-start \code{cwnd} samples before the connection entered a loss state. The useful 
+samples are the top points of the Reno sawtooth: they indicate how far Reno can grow before the TBF and TCP recovery 
+mechanisms push it down again. Averaging these top \code{cwnd} values gives an initial estimate of the largest safe 
+window for that configuration.
+
+The second step was to rerun the transfer with explicit server-side caps. The search started near the uncapped 
+Reno top-\code{cwnd} estimate and then gradually decreased the configured \code{cwnd\_limit}. For each capped run, the 
+pipeline recorded throughput and a loss rate computed from the kernel phase labels, mainly the fraction of samples 
+marked as \code{loss\_recovery}. A stricter diagnostic also considered \code{fast\_retransmit}. The empirical cap is 
+therefore the cap found by physical measurement: it is the value that removes most of the loss-recovery behavior 
+while keeping the transfer close to the best observed throughput. This empirical value is not meant to be deployable 
+by itself; it is the ground truth used to judge whether the formulas from the simulation papers remain accurate on 
+the Linux testbed.
+
 \subsection{Early Sanity Check: Large Queue}
 
 
-Question: From whihc report did you get this experiment result? Do you have a figure that shows the result? 
 The first stable setup used \(R_{\mathrm{tbf}} = 1\) Gbit/s, burst size 1 MB, and \(Q_{\mathrm{config}} = 50000\) B. With 
 RTT around 0.4 ms, the BDP is about 50000 B, so the original formula predicts a cap close to 66--67 MSS-sized segments. 
-The measured result matched this prediction: \code{cwnd\_limit} around 66--67 produced a flat and stable trace.
+This experiment is documented in the project notes in \code{client\_server/README} and summarized again in 
+\code{client\_server/report1/optimalCWND.md}. The measured result matched the prediction: \code{cwnd\_limit} around 
+66--67 produced a flat and stable trace.
 
 However, the throughput improvement over Reno was small: roughly 9.20 s for the capped runs versus about 9.51 s on 
 average for Reno-like runs when sending 1 GiB. This is not a contradiction of the ns-3 work. Friedli's results 
 already showed that once the TBF queue reaches approximately the BDP, Reno can often keep the outgoing link 
 busy despite its sawtooth. The physical setup first validated this large-queue regime before moving to smaller queues.
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.86\textwidth]{../client_server/research_images/opt_cwnd_66_and_reno.png}
+  \caption{Early large-queue sanity check comparing uncapped Reno-like behavior with a \code{cwnd} cap near 66 segments.}
+  \label{fig:opt_cwnd_66}
+\end{figure}
+
 \subsection{Sweep Results}
 
-Note: In the entire report, you didn't mention about using how the "empirical value" is being found. Add this in an appropriate
-location. To repeat what I have informed you before, the way how we detected the empirical cwnd is by firstly testing with 
-the normal TCP Reno, retrieving all cwnds (before falling into a loss state), and calculating the average of it. Based on
-this we gradually decreases the cwnd from the server side, and record the loss rate. The one with the least lost rate implies
-the "empirical" cwnd.
 Across all 100 queue/burst/rate points, the empirical cap was the most reliable high-throughput choice. 
 The generated analysis in \code{client\_server/report4} reports the following aggregate metrics:
 
@@ -448,14 +484,26 @@ not a stable whole-transfer constant. The relevant value is a short burst into t
 one base RTT, and this value depends on offloads, pacing, qdisc behavior, and the current TCP phase.
 
 
-Question && Note: I dont quite understand about this part, previously we said that the cause of the plateau is 
-by the ring buffer being full and here you are saying that it is not. In fact it is caused by the unstable R_arrival?
-=> the reader would then ask... Why don't you make the server send in a rate such that R_arrival would be
-stable?
-This also fixes an earlier mis-explanation in the outline: the plateau and poor performance were not primarily 
-caused by the receiver buffer being full. The receiver-side tests and \code{rwnd} logs showed that flow control 
-was not the main limiter. The dominant issue was the interaction between sender-side TBF enqueue bursts, 
-qdisc queue occupancy, NIC behavior, and TCP loss recovery.
+It is important to separate two different problems that looked similar in the early notes. The full kernel ring buffer 
+was a measurement problem: it made the beginning of the \code{cwnd} trace disappear, so the plots could look as if TCP 
+started from an impossible state. After the background \code{dmesg} extractor was added, this artifact was greatly 
+reduced. It was not the network mechanism that caused the throughput plateau.
+
+The plateau and collapse in the small-queue experiments came from the data path itself. A bulk-sending server can 
+deliver packets to the TBF enqueue path faster than the TBF token rate. During these short bursts, the configured 
+qdisc queue is partly consumed before it can act as useful BDP-plus-queue headroom. If the cap is too large, this 
+pressure pushes the flow into loss recovery; if the cap is small enough, the sender stays near the TBF rate without 
+repeated recovery. This is why \(R_{\mathrm{arrival}}\) matters, and why the same \(R_{\mathrm{tbf}}\) and BDP can lead 
+to different practical caps when the sender pacing and qdisc behavior change.
+
+One possible follow-up would be to modify the server so that \(R_{\mathrm{arrival}}\) is intentionally controlled. 
+For example, the server could expose \code{SO\_MAX\_PACING\_RATE} as an experiment parameter, add application-level 
+pacing between send calls, or use \code{TCP\_NOTSENT\_LOWAT} to limit how much unsent data accumulates in the TCP stack. 
+This would make it possible to run a cleaner experiment with \(R_{\mathrm{arrival}} \approx R_{\mathrm{tbf}}\), and then 
+with known ratios such as \(1.25R_{\mathrm{tbf}}\) or \(2R_{\mathrm{tbf}}\). The reason this was not the main experiment 
+is that the target deployment should work with an ordinary bulk sender, not only with a cooperative sender that has 
+already been paced to the bottleneck rate. Pacing the server would be useful for isolating the model, but it would 
+also hide exactly the burst pressure that made the physical setup differ from ns-3.
 
 \section{Experiment 2: Receiver-Side RWND Control}
 
@@ -558,13 +606,32 @@ the setup is not exactly the default production Linux network path.
 
 \section{Conclusion}
 
-\section*{References}
+\begin{thebibliography}{9}
 
-\begin{enumerate}
-  \item Franziska Friedli, \emph{Revisiting Traffic Congestion Control Protocols at the Last Mile}, EPFL NAL Semester Project, 2025.
-  \item Martynas Rimkevicius, \emph{Inference of Traffic Differentiation Policing Rate}, EPFL NAL Semester Project, 2025.
-  \item Tobias Flach et al., \emph{An Internet-Wide Analysis of Traffic Policing}, ACM SIGCOMM, 2016.
-  \item Fangfan Li et al., \emph{A Large-Scale Analysis of Deployed Traffic Differentiation Practices}, ACM SIGCOMM, 2019.
-\end{enumerate}
+\bibitem{friedli}
+Franziska Friedli, \emph{Revisiting Traffic Congestion Control Protocols at the Last Mile}, EPFL NAL Semester Project, 2025.
+
+\bibitem{rimkevicius}
+Martynas Rimkevicius, \emph{Inference of Traffic Differentiation Policing Rate}, EPFL NAL Semester Project, 2025.
+
+\bibitem{flach}
+Tobias Flach et al., \emph{An Internet-Wide Analysis of Traffic Policing}, ACM SIGCOMM, 2016.
+
+\bibitem{wehe}
+Fangfan Li et al., \emph{A Large-Scale Analysis of Deployed Traffic Differentiation Practices}, ACM SIGCOMM, 2019.
+
+\bibitem{tc}
+Linux manual page, \emph{tc(8)}, \url{https://man7.org/linux/man-pages/man8/tc.8.html}.
+
+\bibitem{tctbf}
+Linux manual page, \emph{tc-tbf(8)}, \url{https://man7.org/linux/man-pages/man8/tc-tbf.8.html}.
+
+\bibitem{dmesg}
+Linux manual page, \emph{dmesg(1)}, \url{https://man7.org/linux/man-pages/man1/dmesg.1.html}.
+
+\bibitem{printk}
+Linux kernel documentation, \emph{Message logging with printk}, \url{https://docs.kernel.org/core-api/printk-basics.html}.
+
+\end{thebibliography}
 
 \end{document}

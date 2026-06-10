@@ -232,6 +232,11 @@ INPUT ./images/physical_setup2/no_tbf_ring_not_clean.png
 INPUT ./images/physical_setup2/no_tbf_ring_not_clean.png
 INPUT ./images/physical_setup2/no_tbf_ring_not_clean.png
 INPUT ./images/physical_setup2/no_tbf_ring_not_clean.png
+INPUT ../client_server/research_images/opt_cwnd_66_and_reno.png
+INPUT ../client_server/research_images/opt_cwnd_66_and_reno.png
+INPUT ../client_server/research_images/opt_cwnd_66_and_reno.png
+INPUT ../client_server/research_images/opt_cwnd_66_and_reno.png
+INPUT ../client_server/research_images/opt_cwnd_66_and_reno.png
 INPUT ../client_server/report4/images/strategy_throughput_by_queue.png
 INPUT ../client_server/report4/images/strategy_throughput_by_queue.png
 INPUT ../client_server/report4/images/strategy_throughput_by_queue.png
@@ -254,6 +259,5 @@ INPUT /usr/share/texmf/fonts/type1/public/cm-super/sfbx1440.pfb
 INPUT /usr/share/texmf/fonts/type1/public/cm-super/sfbx2488.pfb
 INPUT /usr/share/texmf/fonts/type1/public/cm-super/sfrm1000.pfb
 INPUT /usr/share/texmf/fonts/type1/public/cm-super/sfrm1200.pfb
-INPUT /usr/share/texmf/fonts/type1/public/cm-super/sfrm1440.pfb
 INPUT /usr/share/texmf/fonts/type1/public/cm-super/sfti1000.pfb
 INPUT /usr/share/texmf/fonts/type1/public/cm-super/sftt1000.pfb
