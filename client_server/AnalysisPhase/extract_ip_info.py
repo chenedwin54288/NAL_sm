@@ -35,6 +35,15 @@ def parse_args() -> argparse.Namespace:
         default=str(DEFAULT_OUTPUT),
         help=f"Path to output JSON file (default: {DEFAULT_OUTPUT})",
     )
+    parser.add_argument(
+        "--cwnd-limit",
+        type=int,
+        default=0,
+        help=(
+            "Configured cwnd cap in MSS-sized segments. If slow-start exit is not "
+            "detected, throughput starts at the first sample where cwnd reaches this cap."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -83,8 +92,14 @@ def new_byte_sample(row):
     }
 
 
-def summarize_post_slow_start(slow_start_end_sample, final_sample):
+def summarize_post_slow_start(
+    slow_start_end_sample,
+    final_sample,
+    cwnd_cap_reached_sample=None,
+    cwnd_limit=0,
+):
     summary = {
+        "throughput_start_reason": None,
         "post_slow_start_byte_source": THROUGHPUT_BYTE_SOURCE,
         "slow_start_end_timestamp": None,
         "slow_start_end_phase": None,
@@ -92,6 +107,13 @@ def summarize_post_slow_start(slow_start_end_sample, final_sample):
         "slow_start_end_cwnd": None,
         "slow_start_end_bytes_acked": None,
         "slow_start_end_bytes_sent": None,
+        "cwnd_limit": cwnd_limit if cwnd_limit > 0 else None,
+        "cwnd_cap_reached_timestamp": None,
+        "cwnd_cap_reached_phase": None,
+        "cwnd_cap_reached_seq": None,
+        "cwnd_cap_reached_cwnd": None,
+        "cwnd_cap_reached_bytes_acked": None,
+        "cwnd_cap_reached_bytes_sent": None,
         "final_timestamp": None,
         "final_bytes_acked": None,
         "final_bytes_sent": None,
@@ -101,31 +123,61 @@ def summarize_post_slow_start(slow_start_end_sample, final_sample):
         "post_slow_start_mib_per_second": None,
     }
 
-    if slow_start_end_sample is None or final_sample is None:
+    if final_sample is None:
         return summary
-
-    elapsed = final_sample["timestamp"] - slow_start_end_sample["timestamp"]
-    post_slow_start_bytes = final_sample["bytes"] - slow_start_end_sample["bytes"]
 
     summary.update(
         {
-            "slow_start_end_timestamp": slow_start_end_sample["timestamp"],
-            "slow_start_end_phase": slow_start_end_sample["phase"],
-            "slow_start_end_seq": slow_start_end_sample["seq"],
-            "slow_start_end_cwnd": slow_start_end_sample["cwnd"],
-            "slow_start_end_bytes_acked": slow_start_end_sample["bytes_acked"],
-            "slow_start_end_bytes_sent": slow_start_end_sample["bytes_sent"],
             "final_timestamp": final_sample["timestamp"],
             "final_bytes_acked": final_sample["bytes_acked"],
             "final_bytes_sent": final_sample["bytes_sent"],
         }
     )
 
+    if slow_start_end_sample is not None:
+        summary.update(
+            {
+                "slow_start_end_timestamp": slow_start_end_sample["timestamp"],
+                "slow_start_end_phase": slow_start_end_sample["phase"],
+                "slow_start_end_seq": slow_start_end_sample["seq"],
+                "slow_start_end_cwnd": slow_start_end_sample["cwnd"],
+                "slow_start_end_bytes_acked": slow_start_end_sample["bytes_acked"],
+                "slow_start_end_bytes_sent": slow_start_end_sample["bytes_sent"],
+            }
+        )
+
+    if cwnd_cap_reached_sample is not None:
+        summary.update(
+            {
+                "cwnd_cap_reached_timestamp": cwnd_cap_reached_sample["timestamp"],
+                "cwnd_cap_reached_phase": cwnd_cap_reached_sample["phase"],
+                "cwnd_cap_reached_seq": cwnd_cap_reached_sample["seq"],
+                "cwnd_cap_reached_cwnd": cwnd_cap_reached_sample["cwnd"],
+                "cwnd_cap_reached_bytes_acked": cwnd_cap_reached_sample["bytes_acked"],
+                "cwnd_cap_reached_bytes_sent": cwnd_cap_reached_sample["bytes_sent"],
+            }
+        )
+
+    start_reason = None
+    start_sample = None
+    if slow_start_end_sample is not None:
+        start_reason = "slow_start_exit"
+        start_sample = slow_start_end_sample
+    elif cwnd_cap_reached_sample is not None:
+        start_reason = "cwnd_cap_reached"
+        start_sample = cwnd_cap_reached_sample
+    else:
+        return summary
+
+    elapsed = final_sample["timestamp"] - start_sample["timestamp"]
+    post_slow_start_bytes = final_sample["bytes"] - start_sample["bytes"]
+
     if elapsed <= 0 or post_slow_start_bytes < 0:
         return summary
 
     summary.update(
         {
+            "throughput_start_reason": start_reason,
             "post_slow_start_elapsed_seconds": elapsed,
             "post_slow_start_bytes": post_slow_start_bytes,
             "post_slow_start_mbit_per_second": (
@@ -140,7 +192,7 @@ def summarize_post_slow_start(slow_start_end_sample, final_sample):
     return summary
 
 
-def extract_ip_info(csv_path: Path) -> dict:
+def extract_ip_info(csv_path: Path, cwnd_limit=0) -> dict:
     phase_counts = {}
     rtt_total = 0
     rtt_count = 0
@@ -151,6 +203,7 @@ def extract_ip_info(csv_path: Path) -> dict:
     max_timestamp = None
     seen_slow_start = False
     slow_start_end_sample = None
+    cwnd_cap_reached_sample = None
     final_byte_sample = None
 
     with csv_path.open("r", encoding="utf-8", newline="") as csv_file:
@@ -192,6 +245,14 @@ def extract_ip_info(csv_path: Path) -> dict:
             if phase != "slow_start" and seen_slow_start and slow_start_end_sample is None:
                 slow_start_end_sample = byte_sample
 
+            if (
+                cwnd_limit > 0
+                and cwnd_cap_reached_sample is None
+                and byte_sample["cwnd"] is not None
+                and byte_sample["cwnd"] >= cwnd_limit
+            ):
+                cwnd_cap_reached_sample = byte_sample
+
             final_byte_sample = byte_sample
 
     average_rtt = None
@@ -213,7 +274,12 @@ def extract_ip_info(csv_path: Path) -> dict:
         "min_timestamp": min_timestamp,
         "max_timestamp": max_timestamp,
         "transfer_time_seconds": transfer_time_seconds,
-        **summarize_post_slow_start(slow_start_end_sample, final_byte_sample),
+        **summarize_post_slow_start(
+            slow_start_end_sample,
+            final_byte_sample,
+            cwnd_cap_reached_sample,
+            cwnd_limit,
+        ),
     }
 
 
@@ -226,6 +292,9 @@ def write_json(output_path: Path, info: dict) -> None:
 
 def main() -> int:
     args = parse_args()
+    if args.cwnd_limit < 0:
+        print("--cwnd-limit must be non-negative", file=sys.stderr)
+        return 1
     input_path = Path(args.input)
     output_path = Path(args.output)
 
@@ -234,7 +303,7 @@ def main() -> int:
         return 1
 
     try:
-        info = extract_ip_info(input_path)
+        info = extract_ip_info(input_path, args.cwnd_limit)
     except ValueError as error:
         print(error, file=sys.stderr)
         return 1

@@ -1,0 +1,21 @@
+{
+  "client_ip": "192.168.88.253",
+  "client_port": 57114,
+  "server_host": "0.0.0.0",
+  "server_port": 9001,
+  "target_rate_mbit_per_second": 1073.741824,
+  "target_rate_bytes_per_second": 134217728.0,
+  "target_duration_seconds": 1.2,
+  "target_bytes": 161061274,
+  "send_mode": "bulk",
+  "probe_format": "framed",
+  "timestamp_units": "nanoseconds since Unix epoch in framed headers",
+  "probe_frame_count": 110316,
+  "sent_bytes": 161061274,
+  "sent_payload_bytes": 161061274,
+  "elapsed_seconds": 11.922179339977447,
+  "actual_rate_mbit_per_second": 108.07505534490956,
+  "start_timestamp": 1781038081.4197989,
+  "end_timestamp": 1781038093.3420386,
+  "chunk_size": 1460
+}

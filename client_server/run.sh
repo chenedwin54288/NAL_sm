@@ -203,12 +203,12 @@ post_elapsed = summary.get("post_slow_start_elapsed_seconds")
 if post_mbit is None and post_bytes is not None and post_elapsed:
     post_mbit = post_bytes * 8.0 / post_elapsed / 1_000_000.0
 
-after_slow_start_line = ""
+throughput_interval_line = ""
 if server_log_path.exists():
     with server_log_path.open("r", encoding="utf-8") as log_file:
         for line in log_file:
-            if "After slow start:" in line:
-                after_slow_start_line = line.strip()
+            if "After slow start:" in line or "After cwnd cap reached:" in line:
+                throughput_interval_line = line.strip()
 
 print(f"Drop rate: {fmt_float(drop_rate)}", end="")
 if row_count:
@@ -232,8 +232,8 @@ else:
 print(f"post_slow_start_mbit_per_second: {fmt_float(post_mbit)}")
 print(f"post_slow_start_mib_per_second: {fmt_float(post_mib)}")
 print(
-    "Server after slow start: "
-    f"{after_slow_start_line if after_slow_start_line else 'N/A'}"
+    "Server throughput interval: "
+    f"{throughput_interval_line if throughput_interval_line else 'N/A'}"
 )
 PY
 }
@@ -410,6 +410,10 @@ SERVER_CMD=(
   --summary-file "$TMP_SUMMARY"
 )
 
+if [[ -n "$CWND" ]]; then
+  SERVER_CMD+=(--cwnd-limit "$CWND")
+fi
+
 if [[ -n "$FILE_PATH" ]]; then
   SERVER_CMD+=(--file "$FILE_PATH")
 fi
@@ -472,7 +476,8 @@ if [[ "$CCA" == "my_cca" ]]; then
   log "Extracting CSV summary"
   python3 "$EXTRACT_IP_INFO_PATH" \
     --input "$FILTERED_CSV" \
-    --output "$INFO_JSON"
+    --output "$INFO_JSON" \
+    --cwnd-limit "$CWND"
 
   # Plot cwnd evolution for this transfer.
   # - not specifying "--start-row" and "--end-row" will plot everything and this will take a lot of time

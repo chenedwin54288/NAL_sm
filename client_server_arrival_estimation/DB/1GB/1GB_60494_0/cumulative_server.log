@@ -1,0 +1,5 @@
+Cumulative probe target: 1342177280 bytes at 1073.742 Mbit/s for 10s (send_mode=paced)
+Listening on 0.0.0.0:9001 ...
+Client connected from ('192.168.88.253', 36192)
+Set SO_MAX_PACING_RATE to 134217728 bytes/s (1073.742 Mbit/s)
+Sent 1342177280 bytes in 22.645840s (474.145 Mbit/s)

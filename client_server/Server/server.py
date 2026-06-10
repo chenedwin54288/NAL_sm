@@ -83,9 +83,10 @@ def tcp_info_in_slow_start(tcp_info):
     return tcp_info["snd_cwnd"] < tcp_info["snd_ssthresh"]
 
 
-def new_slow_start_tracker(conn):
+def new_slow_start_tracker(conn, cwnd_limit=0):
     return {
         "conn": conn,
+        "cwnd_limit": cwnd_limit if cwnd_limit > 0 else None,
         "seen_slow_start": False,
         "last_in_slow_start": None,
         "end_time": None,
@@ -93,6 +94,11 @@ def new_slow_start_tracker(conn):
         "end_bytes_acked": None,
         "end_snd_cwnd": None,
         "end_snd_ssthresh": None,
+        "cap_reached_time": None,
+        "cap_reached_bytes_written": None,
+        "cap_reached_bytes_acked": None,
+        "cap_reached_snd_cwnd": None,
+        "cap_reached_snd_ssthresh": None,
     }
 
 
@@ -107,6 +113,18 @@ def update_slow_start_tracker(tracker, bytes_written):
     in_slow_start = tcp_info_in_slow_start(tcp_info)
     if in_slow_start:
         tracker["seen_slow_start"] = True
+
+    cwnd_limit = tracker.get("cwnd_limit")
+    if (
+        cwnd_limit is not None
+        and tracker["cap_reached_time"] is None
+        and tcp_info["snd_cwnd"] >= cwnd_limit
+    ):
+        tracker["cap_reached_time"] = time.time()
+        tracker["cap_reached_bytes_written"] = bytes_written
+        tracker["cap_reached_bytes_acked"] = tcp_info["bytes_acked"]
+        tracker["cap_reached_snd_cwnd"] = tcp_info["snd_cwnd"]
+        tracker["cap_reached_snd_ssthresh"] = tcp_info["snd_ssthresh"]
 
     if tracker["last_in_slow_start"] is None:
         tracker["last_in_slow_start"] = in_slow_start
@@ -127,44 +145,91 @@ def update_slow_start_tracker(tracker, bytes_written):
 
 def summarize_post_slow_start(tracker, total_bytes, start_time, end_time):
     summary = {
+        "throughput_start_reason": None,
         "slow_start_end_time": None,
         "slow_start_end_offset_seconds": None,
         "slow_start_end_bytes_written": None,
         "slow_start_end_bytes_acked": None,
         "slow_start_end_snd_cwnd": None,
         "slow_start_end_snd_ssthresh": None,
+        "cwnd_limit": None,
+        "cwnd_cap_reached_time": None,
+        "cwnd_cap_reached_offset_seconds": None,
+        "cwnd_cap_reached_bytes_written": None,
+        "cwnd_cap_reached_bytes_acked": None,
+        "cwnd_cap_reached_snd_cwnd": None,
+        "cwnd_cap_reached_snd_ssthresh": None,
         "post_slow_start_elapsed_seconds": None,
         "post_slow_start_bytes": None,
         "post_slow_start_byte_source": None,
         "post_slow_start_mib_per_second": None,
     }
 
-    if tracker is None or tracker["end_time"] is None:
+    if tracker is None:
         return summary
 
-    elapsed = end_time - tracker["end_time"]
+    summary.update(
+        {
+            "cwnd_limit": tracker["cwnd_limit"],
+            "slow_start_end_time": tracker["end_time"],
+            "slow_start_end_offset_seconds": (
+                tracker["end_time"] - start_time
+                if tracker["end_time"] is not None
+                else None
+            ),
+            "slow_start_end_bytes_written": tracker["end_bytes_written"],
+            "slow_start_end_bytes_acked": tracker["end_bytes_acked"],
+            "slow_start_end_snd_cwnd": tracker["end_snd_cwnd"],
+            "slow_start_end_snd_ssthresh": tracker["end_snd_ssthresh"],
+            "cwnd_cap_reached_time": tracker["cap_reached_time"],
+            "cwnd_cap_reached_offset_seconds": (
+                max(0, tracker["cap_reached_time"] - start_time)
+                if tracker["cap_reached_time"] is not None
+                else None
+            ),
+            "cwnd_cap_reached_bytes_written": tracker["cap_reached_bytes_written"],
+            "cwnd_cap_reached_bytes_acked": tracker["cap_reached_bytes_acked"],
+            "cwnd_cap_reached_snd_cwnd": tracker["cap_reached_snd_cwnd"],
+            "cwnd_cap_reached_snd_ssthresh": tracker["cap_reached_snd_ssthresh"],
+        }
+    )
+
+    start_reason = None
+    interval_start_time = None
+    interval_start_bytes_written = None
+    interval_start_bytes_acked = None
+
+    if tracker["end_time"] is not None:
+        start_reason = "slow_start_exit"
+        interval_start_time = tracker["end_time"]
+        interval_start_bytes_written = tracker["end_bytes_written"]
+        interval_start_bytes_acked = tracker["end_bytes_acked"]
+    elif tracker["cap_reached_time"] is not None:
+        start_reason = "cwnd_cap_reached"
+        interval_start_time = max(tracker["cap_reached_time"], start_time)
+        interval_start_bytes_written = tracker["cap_reached_bytes_written"]
+        interval_start_bytes_acked = tracker["cap_reached_bytes_acked"]
+    else:
+        return summary
+
+    elapsed = end_time - interval_start_time
     final_tcp_info = read_tcp_info(tracker["conn"])
     byte_source = "bytes_written"
-    post_slow_start_bytes = total_bytes - tracker["end_bytes_written"]
+    post_slow_start_bytes = total_bytes - interval_start_bytes_written
 
     if (
         final_tcp_info is not None
         and final_tcp_info["bytes_acked"] is not None
-        and tracker["end_bytes_acked"] is not None
+        and interval_start_bytes_acked is not None
     ):
         byte_source = "bytes_acked"
-        post_slow_start_bytes = final_tcp_info["bytes_acked"] - tracker["end_bytes_acked"]
+        post_slow_start_bytes = final_tcp_info["bytes_acked"] - interval_start_bytes_acked
 
     post_slow_start_bytes = max(0, post_slow_start_bytes)
 
     summary.update(
         {
-            "slow_start_end_time": tracker["end_time"],
-            "slow_start_end_offset_seconds": tracker["end_time"] - start_time,
-            "slow_start_end_bytes_written": tracker["end_bytes_written"],
-            "slow_start_end_bytes_acked": tracker["end_bytes_acked"],
-            "slow_start_end_snd_cwnd": tracker["end_snd_cwnd"],
-            "slow_start_end_snd_ssthresh": tracker["end_snd_ssthresh"],
+            "throughput_start_reason": start_reason,
             "post_slow_start_elapsed_seconds": elapsed,
             "post_slow_start_bytes": post_slow_start_bytes,
             "post_slow_start_byte_source": byte_source,
@@ -355,6 +420,15 @@ def main():
     parser.add_argument("--r-arrival-interval-ms", type=int, default=1, help="Milliseconds between R_arrival samples (default: 1)")
     parser.add_argument("--summary-file", default=None, help="Write transfer summary JSON to this path")
     parser.add_argument(
+        "--cwnd-limit",
+        type=int,
+        default=0,
+        help=(
+            "Configured sender-side cwnd cap in MSS-sized segments. "
+            "Used only to start throughput measurement when slow-start exit is not detected."
+        ),
+    )
+    parser.add_argument(
         "--max-pacing-rate",
         type=int,
         default=DEFAULT_MAX_PACING_RATE_BYTES_PER_SEC,
@@ -364,6 +438,8 @@ def main():
         ),
     )
     args = parser.parse_args()
+    if args.cwnd_limit < 0:
+        parser.error("--cwnd-limit must be non-negative")
 
     file_path = args.file
     args_size = args.size * ONE_GIB
@@ -421,7 +497,7 @@ def main():
                             file=sys.stderr,
                         )
 
-                slow_start_tracker = new_slow_start_tracker(conn)
+                slow_start_tracker = new_slow_start_tracker(conn, args.cwnd_limit)
                 update_slow_start_tracker(slow_start_tracker, 0)
                 start = time.time()
                 if file_path:
@@ -443,10 +519,21 @@ def main():
                     end,
                 )
                 if post_slow_start_summary["post_slow_start_mib_per_second"] is None:
-                    print("Slow start end was not detected during this transfer")
+                    if args.cwnd_limit > 0:
+                        print(
+                            "Neither slow start end nor cwnd cap was detected during this transfer"
+                        )
+                    else:
+                        print("Slow start end was not detected during this transfer")
                 else:
+                    interval_label = "After slow start"
+                    if (
+                        post_slow_start_summary["throughput_start_reason"]
+                        == "cwnd_cap_reached"
+                    ):
+                        interval_label = "After cwnd cap reached"
                     print(
-                        "After slow start: "
+                        f"{interval_label}: "
                         f"{post_slow_start_summary['post_slow_start_mib_per_second']:.2f} MiB/s "
                         f"over {post_slow_start_summary['post_slow_start_elapsed_seconds']:.2f}s "
                         f"({post_slow_start_summary['post_slow_start_byte_source']})"

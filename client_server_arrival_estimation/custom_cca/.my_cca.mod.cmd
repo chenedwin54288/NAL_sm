@@ -1,0 +1,1 @@
+cmd_/home/nal/NAL_edwin_sm/client_server_arrival_estimation/custom_cca/my_cca.mod := { echo  /home/nal/NAL_edwin_sm/client_server_arrival_estimation/custom_cca/my_cca.o;  echo; } > /home/nal/NAL_edwin_sm/client_server_arrival_estimation/custom_cca/my_cca.mod
