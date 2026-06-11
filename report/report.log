@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.5.22)  10 JUN 2026 14:59
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.5.22)  11 JUN 2026 03:13
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -570,58 +570,88 @@ Package hyperref Info: Link coloring ON on input line 45.
 \openout5 = `report.toc'.
 
  [2]
-LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 95.
+LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 89.
  (/usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
 File: t1cmtt.fd 2023/04/13 v2.5m Standard LaTeX font definitions
-) [3] [4]
+) [3]
+<images/final_auto_pipeline/setup.png, id=89, 3103.595pt x 730.73pt>
+File: images/final_auto_pipeline/setup.png Graphic file (type png)
+<use images/final_auto_pipeline/setup.png>
+Package pdftex.def Info: images/final_auto_pipeline/setup.png  used on input line 186.
+(pdftex.def)             Requested size: 437.0374pt x 102.89244pt.
+ [4]
 <images/physical_setup1/WeHe_youtube.png, id=98, 1806.75pt x 903.375pt>
 File: images/physical_setup1/WeHe_youtube.png Graphic file (type png)
 <use images/physical_setup1/WeHe_youtube.png>
-Package pdftex.def Info: images/physical_setup1/WeHe_youtube.png  used on input line 198.
+Package pdftex.def Info: images/physical_setup1/WeHe_youtube.png  used on input line 201.
 (pdftex.def)             Requested size: 391.51021pt x 195.7519pt.
- [5{/usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-ts1.enc} <./images/physical_setup1/WeHe_youtube.png (PNG copy)>]
-<images/physical_setup2/no_tbf_ring_not_clean.png, id=109, 1656.1875pt x 828.09375pt>
+ [5 <./images/final_auto_pipeline/setup.png (PNG copy)> <./images/physical_setup1/WeHe_youtube.png (PNG copy)>]
+Underfull \hbox (badness 1584) in paragraph at lines 235--236
+[]\T1/cmtt/m/n/10 slow_start\T1/cmr/m/n/10 : the socket is not in \T1/cmtt/m/n/10 TCP_CA_Recovery\T1/cmr/m/n/10 , \T1/cmtt/m/n/10 TCP_CA_Loss\T1/cmr/m/n/10 , or \T1/cmtt/m/n/10 TCP_CA_CWR\T1/cmr/m/n/10 , and
+ []
+
+<images/my_cca/tcp_congestion_ops.png, id=112, 354.57469pt x 152.82094pt>
+File: images/my_cca/tcp_congestion_ops.png Graphic file (type png)
+<use images/my_cca/tcp_congestion_ops.png>
+Package pdftex.def Info: images/my_cca/tcp_congestion_ops.png  used on input line 269.
+(pdftex.def)             Requested size: 213.96529pt x 92.22025pt.
+
+Underfull \hbox (badness 10000) in paragraph at lines 270--270
+[]\T1/cmr/m/n/9 (a) |\T1/cmtt/m/n/9 my_cca \T1/cmr/m/n/9 reg-is-tra-tion through
+ []
+
+<images/my_cca/pr_info.png, id=114, 656.4525pt x 143.03438pt>
+File: images/my_cca/pr_info.png Graphic file (type png)
+<use images/my_cca/pr_info.png>
+Package pdftex.def Info: images/my_cca/pr_info.png  used on input line 275.
+(pdftex.def)             Requested size: 213.96529pt x 46.62093pt.
+[6{/usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-ts1.enc}]
+<images/physical_setup2/no_tbf_ring_not_clean.png, id=123, 1656.1875pt x 828.09375pt>
 File: images/physical_setup2/no_tbf_ring_not_clean.png Graphic file (type png)
 <use images/physical_setup2/no_tbf_ring_not_clean.png>
-Package pdftex.def Info: images/physical_setup2/no_tbf_ring_not_clean.png  used on input line 255.
+Package pdftex.def Info: images/physical_setup2/no_tbf_ring_not_clean.png  used on input line 289.
 (pdftex.def)             Requested size: 391.51021pt x 195.7519pt.
- [6 <./images/physical_setup2/no_tbf_ring_not_clean.png (PNG copy)>] [7]
-<../client_server/research_images/opt_cwnd_66_and_reno.png, id=131, 730.73pt x 471.7625pt>
+<images/final_auto_pipeline/sys_design.png, id=125, 6648.84pt x 3344.495pt>
+File: images/final_auto_pipeline/sys_design.png Graphic file (type png)
+<use images/final_auto_pipeline/sys_design.png>
+Package pdftex.def Info: images/final_auto_pipeline/sys_design.png  used on input line 303.
+(pdftex.def)             Requested size: 455.24411pt x 228.98425pt.
+ [7 <./images/my_cca/tcp_congestion_ops.png> <./images/my_cca/pr_info.png> <./images/physical_setup2/no_tbf_ring_not_clean.png (PNG copy)>] [8 <./images/final_auto_pipeline/sys_design.png (PNG copy)>] [9]
+<../client_server/research_images/opt_cwnd_66_and_reno.png, id=155, 730.73pt x 471.7625pt>
 File: ../client_server/research_images/opt_cwnd_66_and_reno.png Graphic file (type png)
 <use ../client_server/research_images/opt_cwnd_66_and_reno.png>
-Package pdftex.def Info: ../client_server/research_images/opt_cwnd_66_and_reno.png  used on input line 353.
+Package pdftex.def Info: ../client_server/research_images/opt_cwnd_66_and_reno.png  used on input line 421.
 (pdftex.def)             Requested size: 391.51021pt x 252.76115pt.
- [8]
-<../client_server/report4/images/strategy_throughput_by_queue.png, id=137, 1084.05pt x 578.16pt>
+ [10 <../client_server/research_images/opt_cwnd_66_and_reno.png (PNG copy)>]
+<../client_server/report4/images/strategy_throughput_by_queue.png, id=163, 1084.05pt x 578.16pt>
 File: ../client_server/report4/images/strategy_throughput_by_queue.png Graphic file (type png)
 <use ../client_server/report4/images/strategy_throughput_by_queue.png>
-Package pdftex.def Info: ../client_server/report4/images/strategy_throughput_by_queue.png  used on input line 400.
+Package pdftex.def Info: ../client_server/report4/images/strategy_throughput_by_queue.png  used on input line 469.
 (pdftex.def)             Requested size: 418.82375pt x 223.37303pt.
- [9 <../client_server/research_images/opt_cwnd_66_and_reno.png (PNG copy)>]
-<../client_server/report4/images/empirical_gain_over_reno_heatmap.png, id=146, 1011.78pt x 650.43pt>
+<../client_server/report4/images/empirical_gain_over_reno_heatmap.png, id=164, 1084.05pt x 375.804pt>
 File: ../client_server/report4/images/empirical_gain_over_reno_heatmap.png Graphic file (type png)
 <use ../client_server/report4/images/empirical_gain_over_reno_heatmap.png>
-Package pdftex.def Info: ../client_server/report4/images/empirical_gain_over_reno_heatmap.png  used on input line 412.
-(pdftex.def)             Requested size: 418.82375pt x 269.24854pt.
- [10 <../client_server/report4/images/strategy_throughput_by_queue.png> <../client_server/report4/images/empirical_gain_over_reno_heatmap.png>] [11] [12] [13] [14] (./report.aux)
+Package pdftex.def Info: ../client_server/report4/images/empirical_gain_over_reno_heatmap.png  used on input line 481.
+(pdftex.def)             Requested size: 418.82375pt x 145.19247pt.
+ [11 <../client_server/report4/images/strategy_throughput_by_queue.png>] [12 <../client_server/report4/images/empirical_gain_over_reno_heatmap.png>] [13] [14] [15] [16] (./report.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 14991 strings out of 476182
- 251816 string characters out of 5795595
+ 15051 strings out of 476182
+ 253663 string characters out of 5795595
  1936975 words of memory out of 5000000
- 36679 multiletter control sequences out of 15000+600000
- 568185 words of font info for 53 fonts, out of 8000000 for 9000
+ 36730 multiletter control sequences out of 15000+600000
+ 569263 words of font info for 55 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 94i,12n,93p,404b,576s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx2488.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfti1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt1000.pfb>
-Output written on report.pdf (14 pages, 893840 bytes).
+ 94i,12n,93p,537b,600s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx1440.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfbx2488.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm0900.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfrm1200.pfb></usr/share/texmf/fonts/type1/public/cm-super/sfti1000.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt0900.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt1000.pfb>
+Output written on report.pdf (16 pages, 4152060 bytes).
 PDF statistics:
- 264 PDF objects out of 1000 (max. 8388607)
- 211 compressed objects within 3 object streams
- 72 named destinations out of 1000 (max. 500000)
- 38 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 300 PDF objects out of 1000 (max. 8388607)
+ 235 compressed objects within 3 object streams
+ 79 named destinations out of 1000 (max. 500000)
+ 58 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -3,63 +3,71 @@
 \providecommand\hyper@newdestlabel[2]{}
 \providecommand\HyField@AuxAddToFields[1]{}
 \providecommand\HyField@AuxAddToCoFields[2]{}
-\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{3}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {1}Motivation}{3}{section.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {2}Background}{3}{section.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Token-Bucket Policing and TCP Windows}{3}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Prior Work in ns-3}{3}{subsection.2.2}\protected@file@percent }
 \citation{tc}
 \citation{tctbf}
-\citation{wehe}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Prior Work in ns-3}{4}{subsection.2.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.3}What Changes in a Physical Linux Setup}{4}{subsection.2.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {3}Experimental Setup}{5}{section.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Initial Wehe-Based Attempt}{5}{subsection.3.1}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Early Wehe-based experiment. Polling \texttt  {ss} did not capture the fast \texttt  {cwnd} transitions needed for this project.}}{5}{figure.caption.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Experimental Setup}{4}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Physical Topology and First Measurement Attempt}{4}{subsection.3.1}\protected@file@percent }
+\citation{arianfar_tcp_cc}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Physical setup used in the experiments. The TBF is applied on the server egress path, so traffic is shaped before it reaches the router and client.}}{5}{figure.caption.1}\protected@file@percent }
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{fig:wehe_cwnd}{{1}{5}{Early Wehe-based experiment. Polling \code {ss} did not capture the fast \code {cwnd} transitions needed for this project}{figure.caption.1}{}}
+\newlabel{fig:physical_setup}{{1}{5}{Physical setup used in the experiments. The TBF is applied on the server egress path, so traffic is shaped before it reaches the router and client}{figure.caption.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Early \texttt  {ss}-based \texttt  {cwnd} trace. The trace misses fast transitions, so it is not reliable enough for selecting a window cap.}}{5}{figure.caption.2}\protected@file@percent }
+\newlabel{fig:ss_polling_cwnd}{{2}{5}{Early \code {ss}-based \code {cwnd} trace. The trace misses fast transitions, so it is not reliable enough for selecting a window cap}{figure.caption.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Custom Congestion-Control Module}{5}{subsection.3.2}\protected@file@percent }
 \citation{printk}
 \citation{dmesg}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Handling Kernel Ring-Buffer Overwrite}{6}{subsection.3.3}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Early custom-CCA trace before reliable ring-buffer extraction. Missing early records made the \texttt  {cwnd} evolution look inconsistent.}}{6}{figure.caption.2}\protected@file@percent }
-\newlabel{fig:ring_buffer}{{2}{6}{Early custom-CCA trace before reliable ring-buffer extraction. Missing early records made the \code {cwnd} evolution look inconsistent}{figure.caption.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Final Automation Pipeline}{6}{subsection.3.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Receiver-Side Window Clamp}{7}{subsection.3.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {4}Experiment 1: Sender-Side CWND Capping}{7}{section.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Parameter Sweep}{7}{subsection.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Empirical Cap Selection}{8}{subsection.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Early Sanity Check: Large Queue}{8}{subsection.4.3}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Early large-queue sanity check comparing uncapped Reno-like behavior with a \texttt  {cwnd} cap near 66 segments.}}{9}{figure.caption.3}\protected@file@percent }
-\newlabel{fig:opt_cwnd_66}{{3}{9}{Early large-queue sanity check comparing uncapped Reno-like behavior with a \code {cwnd} cap near 66 segments}{figure.caption.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Sweep Results}{9}{subsection.4.4}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Aggregate result over the 100 physical TBF configurations parsed in \texttt  {report4}.}}{9}{table.caption.4}\protected@file@percent }
-\newlabel{tab:strategy_summary}{{1}{9}{Aggregate result over the 100 physical TBF configurations parsed in \code {report4}}{table.caption.4}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces The benefit of a window cap is largest when the TBF queue is small.}}{9}{table.caption.5}\protected@file@percent }
-\newlabel{tab:queue_gain}{{2}{9}{The benefit of a window cap is largest when the TBF queue is small}{table.caption.5}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Mean throughput by strategy and queue size. Empirical capping dominates in small queues, while all strategies converge for larger queues.}}{10}{figure.caption.6}\protected@file@percent }
-\newlabel{fig:strategy_throughput}{{4}{10}{Mean throughput by strategy and queue size. Empirical capping dominates in small queues, while all strategies converge for larger queues}{figure.caption.6}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Empirical cap gain over Reno. The high-gain region is concentrated at small queues and high token generation rates.}}{10}{figure.caption.7}\protected@file@percent }
-\newlabel{fig:empirical_heatmap}{{5}{10}{Empirical cap gain over Reno. The high-gain region is concentrated at small queues and high token generation rates}{figure.caption.7}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Why the Original Formula Overestimated}{10}{subsection.4.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Remaining Model Mismatch}{11}{subsection.4.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5}Experiment 2: Receiver-Side RWND Control}{12}{section.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Motivation}{12}{subsection.5.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Method}{12}{subsection.5.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Results}{12}{subsection.5.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Representative receiver-side \texttt  {rwnd} tests. Advertising the empirical window from the client closely matches sender-side \texttt  {cwnd} capping.}}{12}{table.caption.8}\protected@file@percent }
-\newlabel{tab:rwnd_examples}{{3}{12}{Representative receiver-side \code {rwnd} tests. Advertising the empirical window from the client closely matches sender-side \code {cwnd} capping}{table.caption.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Implementation snippets for the custom congestion-control module.}}{7}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:mycca_impl}{{3}{7}{Implementation snippets for the custom congestion-control module}{figure.caption.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Early custom-CCA trace before reliable ring-buffer extraction. Missing early records made the \texttt  {cwnd} evolution look inconsistent.}}{7}{figure.caption.4}\protected@file@percent }
+\newlabel{fig:ring_buffer}{{4}{7}{Early custom-CCA trace before reliable ring-buffer extraction. Missing early records made the \code {cwnd} evolution look inconsistent}{figure.caption.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Final Automation Pipeline}{7}{subsection.3.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Final automation pipeline. \texttt  {run.sh} prepares the Linux sender, starts the instrumented server, collects raw logs, and launches the per-run analysis. \texttt  {run\_cwnd\_sweep.sh} wraps this process across many TBF and window configurations.}}{8}{figure.caption.5}\protected@file@percent }
+\newlabel{fig:final_auto_pipeline}{{5}{8}{Final automation pipeline. \code {run.sh} prepares the Linux sender, starts the instrumented server, collects raw logs, and launches the per-run analysis. \code {run\_cwnd\_sweep.sh} wraps this process across many TBF and window configurations}{figure.caption.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Receiver-Side Window Clamp}{9}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experiment 1: Sender-Side CWND Capping}{9}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Parameter Sweep}{9}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Empirical Cap Selection}{9}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Early Sanity Check: Large Queue}{10}{subsection.4.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Early large-queue sanity check comparing uncapped Reno-like behavior with a \texttt  {cwnd} cap near 66 segments.}}{10}{figure.caption.6}\protected@file@percent }
+\newlabel{fig:opt_cwnd_66}{{6}{10}{Early large-queue sanity check comparing uncapped Reno-like behavior with a \code {cwnd} cap near 66 segments}{figure.caption.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Sweep Results}{10}{subsection.4.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Aggregate result over the 75 physical TBF configurations parsed in \texttt  {report4}.}}{11}{table.caption.7}\protected@file@percent }
+\newlabel{tab:strategy_summary}{{1}{11}{Aggregate result over the 75 physical TBF configurations parsed in \code {report4}}{table.caption.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces The benefit of a window cap is largest when the TBF queue is small.}}{11}{table.caption.8}\protected@file@percent }
+\newlabel{tab:queue_gain}{{2}{11}{The benefit of a window cap is largest when the TBF queue is small}{table.caption.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Mean throughput by strategy and queue size. Empirical capping dominates in small queues, while all strategies converge for larger queues.}}{11}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:strategy_throughput}{{7}{11}{Mean throughput by strategy and queue size. Empirical capping dominates in small queues, while all strategies converge for larger queues}{figure.caption.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Empirical-over-Reno throughput ratio. A value such as \(x5\) means the empirical cap achieved five times the Reno throughput for the same TBF configuration. The high-gain region is concentrated at small queues and high token generation rates.}}{12}{figure.caption.10}\protected@file@percent }
+\newlabel{fig:empirical_heatmap}{{8}{12}{Empirical-over-Reno throughput ratio. A value such as \(x5\) means the empirical cap achieved five times the Reno throughput for the same TBF configuration. The high-gain region is concentrated at small queues and high token generation rates}{figure.caption.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Why the Original Formula Overestimated}{12}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Remaining Model Mismatch}{13}{subsection.4.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Experiment 2: Receiver-Side RWND Control}{13}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Motivation}{13}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Method}{14}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Results}{14}{subsection.5.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Representative receiver-side \texttt  {rwnd} tests. Advertising the empirical window from the client closely matches sender-side \texttt  {cwnd} capping.}}{14}{table.caption.11}\protected@file@percent }
+\newlabel{tab:rwnd_examples}{{3}{14}{Representative receiver-side \code {rwnd} tests. Advertising the empirical window from the client closely matches sender-side \code {cwnd} capping}{table.caption.11}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Experiment 3: Estimating the Token Generation Rate}{14}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Relation to Policing-Rate Inference}{14}{subsection.6.1}\protected@file@percent }
+\citation{wehe}
 \bibcite{friedli}{1}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Experiment 3: Toward Receiver-Side Estimation}{13}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Relation to Policing-Rate Inference}{13}{subsection.6.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Cumulative Arrival at the Receiver}{13}{subsection.6.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Receiver-Assisted Enqueue-Rate Estimation}{13}{subsection.6.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7}Limitations}{13}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Cumulative Arrival at the Receiver}{15}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Receiver-Assisted Enqueue-Rate Estimation}{15}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Limitations}{15}{section.7}\protected@file@percent }
 \bibcite{rimkevicius}{2}
-\bibcite{flach}{3}
-\bibcite{wehe}{4}
-\bibcite{tc}{5}
-\bibcite{tctbf}{6}
-\bibcite{dmesg}{7}
-\bibcite{printk}{8}
-\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusion}{14}{section.8}\protected@file@percent }
+\bibcite{arianfar_tcp_cc}{3}
+\bibcite{flach}{4}
+\bibcite{wehe}{5}
+\bibcite{tc}{6}
+\bibcite{tctbf}{7}
+\bibcite{dmesg}{8}
+\bibcite{printk}{9}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Conclusion}{16}{section.8}\protected@file@percent }
 \gdef\svg@ink@ver@settings{{\m@ne }{inkscape}{\m@ne }}
-\gdef \@abspage@last{14}
+\gdef \@abspage@last{16}
