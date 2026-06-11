@@ -1,0 +1,10 @@
+Generating 1073741824 GB of zeros
+Started log extractor with PID 3274020
+Listening on 0.0.0.0:9000 ...
+Client connected from ('192.168.88.253', 46492)
+Set SO_MAX_PACING_RATE to 125000000 bytes/s (1000.00 Mbit/s)
+Started R_arrival extractor with PID 3274247
+Sent 1073741824 bytes in 37.13s (27.58 MiB/s)
+After slow start: 27.57 MiB/s over 37.10s (bytes_acked)
+Stopped R_arrival extractor
+Stopped log extractor

@@ -1,1 +1,0 @@
-[576135.268774] audit: type=1326 audit(1779251734.444:142): auid=1000 uid=1000 gid=1000 ses=3 subj=snap.snap-store.ubuntu-software pid=3573 comm="pool-org.gnome." exe="/snap/snap-store/1216/usr/bin/snap-store" sig=0 arch=c000003e syscall=93 compat=0 ip=0x7f2d96ba8b1b code=0x50000

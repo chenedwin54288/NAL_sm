@@ -1,1 +1,0 @@
-[614705.966761] TCP: my_cca: seq=154557 cwnd=14 rtt=477 bytes_acked=1073741830 bytes_sent=1104853557 phase=slow_start Destination: 192.168.88.253:39212

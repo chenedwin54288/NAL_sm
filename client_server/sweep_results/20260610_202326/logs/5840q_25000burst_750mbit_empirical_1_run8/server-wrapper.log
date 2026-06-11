@@ -1,0 +1,40 @@
+
+==> Resetting TBF on eno1
+
+==> Applying TBF: rate=750Mbit burst=25000b limit=5840b
+
+==> Initializing my_cca with CWND limit 1
+
+==> Initializing my_cca with CWND: 1
+
+==> Checking sudo access
+This script may ask for your sudo password to sign, unload, and load the kernel module.
+
+==> Checking whether my_cca is already loaded
+
+==> Unloading existing my_cca
+
+==> Building my_cca
+make -C /lib/modules/5.15.0-179-generic/build M=/home/nal/NAL_edwin_sm/client_server/custom_cca modules
+make[1]: Entering directory '/usr/src/linux-headers-5.15.0-179-generic'
+make[1]: Leaving directory '/usr/src/linux-headers-5.15.0-179-generic'
+
+==> Signing my_cca.ko
+
+==> Loading my_cca.ko
+
+==> Verifying TCP congestion control list
+net.ipv4.tcp_allowed_congestion_control = reno cubic my_cca
+
+Success: my_cca is loaded and available to the TCP stack.
+
+==> Refreshing sudo access for background extractors
+
+==> Starting server. Connect the client to 0.0.0.0:9000
+Generating 1073741824 GB of zeros
+Started log extractor with PID 1622084
+Listening on 0.0.0.0:9000 ...
+Client connected from ('192.168.88.253', 60614)
+Set SO_MAX_PACING_RATE to 125000000 bytes/s (1000.00 Mbit/s)
+Started R_arrival extractor with PID 1622243
+Terminated
